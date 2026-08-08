@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id("org.beryx.jlink") version "4.1.1"
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
 group = 'com.derpderp'
@@ -8,6 +10,16 @@ version = '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
 }
+
+javafx {
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+application {
+    mainClass = "com.derpderphurr.duku.Main"
+    mainModule = "duku"
+}
+
 
 dependencies {
     testImplementation platform('org.junit:junit-bom:6.0.0')
