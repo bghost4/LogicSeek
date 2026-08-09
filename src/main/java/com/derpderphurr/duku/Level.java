@@ -18,8 +18,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class Level extends Region {
     private final GridPane gp = new GridPane();
@@ -43,24 +41,6 @@ public class Level extends Region {
             Color.hsb(324, 0.45, 0.95), // pastel rose/pink
     };
 
-    private void buildTargets() {
-        //choose targets & verify level design
-        clearTargets();
-        List<Integer> unusedColumns = new ArrayList<>(IntStream.range(0, size).boxed().toList());
-        List<Integer> unusedRows = new ArrayList<>(IntStream.range(0, size).boxed().toList());
-
-        Collections.shuffle(unusedColumns,rand);
-        Collections.shuffle(unusedRows,rand);
-
-        for(int i=0; i < size; i++ ) {
-            tiles[unusedColumns.get(i)][unusedRows.get(i)].setTarget(true);
-        }
-    }
-
-    private void clearTargets() {
-        tileList.forEach(t -> t.setTarget(false));
-    }
-
     private List<Tile> getOrthogonalNeighbors(Tile root) {
         List<Tile> neighbors = new ArrayList<>(4);
         int col = root.getCol();
@@ -76,9 +56,9 @@ public class Level extends Region {
         //fill in the colors
         //same colors must border on the top left bottom or right (a color may be a single tile)
 
-        //seed each color at one of the (already-verified) targets, so every region is
-        //guaranteed exactly one target without a separate per-color check afterward
-        List<Tile> seeds = new ArrayList<>(tileList.stream().filter(Tile::isTarget).toList());
+        //seed each color at a random cell; the target set isn't known yet, it gets derived
+        //afterward by solving whatever partition this produces
+        List<Tile> seeds = new ArrayList<>(tileList);
         Collections.shuffle(seeds, rand);
 
         //grow every region outward in lockstep so no two same-colored blobs can end up disconnected
@@ -159,9 +139,11 @@ public class Level extends Region {
         return true;
     }
 
-    //Simulates the deductions a player is allowed to make (no guessing/backtracking) to check
-    //that every target can be found by process of elimination alone
-    private boolean isSolvableByElimination() {
+    //Derives which cells must be targets using only the deductions a player is allowed to make
+    //(no guessing/backtracking): a row/column/region down to one candidate is forced, and a
+    //region confined to one row/column rules out every other region's candidates on that line.
+    //Runs purely off the color structure, so it works whether or not any targets are set yet.
+    private Set<Tile> solve() {
         Set<Tile> candidates = new HashSet<>(tileList);
         Set<Tile> solved = new HashSet<>();
 
@@ -185,32 +167,27 @@ public class Level extends Region {
             }
         }
 
-        return solved.size() == size;
+        return solved;
     }
 
     private void buildLevel() {
-
-        buildTargets();
-        int iterations = 1;
-        while(!verifyTargets()) {
-            buildTargets();
-            iterations++;
-        }
-        System.out.printf("Took %d iterations to build level%n",iterations);
-
-        //choose colors, then fill regions outward from the now-verified targets
+        //choose colors, then keep growing fresh region partitions until one is fully
+        //derivable by elimination alone - that derived set becomes the targets
         List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
         Collections.shuffle(palette, rand);
         List<Color> colors = palette.subList(0, Math.min(size, palette.size()));
 
         generateFill(colors);
-        int fillIterations = 1;
-        while (!isSolvableByElimination()) {
+        Set<Tile> targets = solve();
+        int iterations = 1;
+        while (targets.size() != size) {
             clearFill();
             generateFill(colors);
-            fillIterations++;
+            targets = solve();
+            iterations++;
         }
-        System.out.printf("Took %d iterations to build a fill solvable by elimination%n", fillIterations);
+        targets.forEach(t -> t.setTarget(true));
+        System.out.printf("Took %d iterations to build a level solvable by elimination%n", iterations);
     }
 
     public Level(int size,long seed) {
@@ -248,28 +225,6 @@ public class Level extends Region {
 
         buildLevel();
 
-    }
-
-    private Stream<Tile> getNeighbors(Tile root) {
-        return tileList.stream().filter(root::isNeighbor);
-    }
-
-    private boolean verifyTargets() {
-        //verify all rows / columns have a target
-        for(int i=0; i < size; i++) {
-            final int fi = i;
-            boolean rowPass = tileList.stream().filter(t -> (t.getRow() == fi && t.isTarget())).count() == 1;
-            boolean colPass = tileList.stream().filter(t -> (t.getCol() == fi && t.isTarget())).count() == 1;
-            if (!rowPass || !colPass) { return false; }
-        }
-
-        //Check Neighbors of targets
-        List<Tile> targets = tileList.stream().filter(Tile::isTarget).toList();
-        if(targets.stream().anyMatch(t -> getNeighbors(t).filter(Tile::isTarget).count() > 1)) { return false; }
-
-        //One target per color is now guaranteed by generateFill seeding each region at a target
-
-        return true;
     }
 
 }
