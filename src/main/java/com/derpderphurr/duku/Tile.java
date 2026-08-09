@@ -21,6 +21,8 @@ public class Tile extends Region {
     private final Circle targetMark = new Circle();
     private Color color = DEFAULT_COLOR;
 
+    private final Level level;
+
     //Logic
     //Target is wether this tile is a target
     private boolean target = false;
@@ -40,9 +42,10 @@ public class Tile extends Region {
         return col;
     }
 
-    public Tile(int x,int y) {
+    public Tile(Level l,int x,int y) {
         this.row = y;
         this.col = x;
+        this.level = l;
 
         rect.widthProperty().bindBidirectional(rect.heightProperty()); //lock in square
         // Define percentages (e.g., 20% of width for arcWidth, 40% of height for arcHeight)

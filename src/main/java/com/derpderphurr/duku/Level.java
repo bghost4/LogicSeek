@@ -1,5 +1,6 @@
 package com.derpderphurr.duku;
 
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -24,9 +25,14 @@ public class Level extends Region {
     private final Tile[][] tiles;
     private final List<Tile> tileList;
     private final int size;
+    private final long levelTimer;
     private double gap = 5;
     private final long seed;
     private final Random rand;
+
+    private final SimpleIntegerProperty score = new SimpleIntegerProperty(0);
+    private final SimpleIntegerProperty foundTargets = new SimpleIntegerProperty(0);
+    private final SimpleIntegerProperty misses = new SimpleIntegerProperty(0);
 
     public static final Color[] REGION_COLORS = {
             Color.hsb(0,   0.45, 0.95), // pastel red
@@ -213,6 +219,22 @@ public class Level extends Region {
         System.out.printf("Took %d iterations to build a level solvable by elimination%n", iterations);
     }
 
+    public void targetMissed() {
+
+    }
+
+    public void targetFound() {
+
+    }
+
+    private void levelComplete() {
+
+    }
+
+    private void levelFailed() {
+
+    }
+
     public Level(int size,long seed) {
         this.size = size;
         this.seed = seed;
@@ -237,7 +259,7 @@ public class Level extends Region {
 
         for(int x=0; x < size; x++ ){
             for(int y=0; y < size; y++) {
-                Tile t  = new Tile(x,y);
+                Tile t  = new Tile(this,x,y);
                 tiles[x][y] = t;
                 GridPane.setVgrow(t, Priority.ALWAYS);
                 GridPane.setHgrow(t,Priority.ALWAYS);
@@ -247,7 +269,7 @@ public class Level extends Region {
         }
 
         buildLevel();
-
+        this.levelTimer = System.currentTimeMillis();
     }
 
 }

@@ -16,7 +16,6 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
-        //Label lblHello = new Label("Hello World");
         vb.getChildren().add(new Level(8,2));
         primaryStage.setScene(new Scene(vb));
         primaryStage.show();
