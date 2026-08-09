@@ -18,7 +18,7 @@ public class Main extends Application {
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
         vb.getChildren().add(lc);
-
+        primaryStage.setWidth(800);
         Playfield p = new Playfield(8,1);
         lc.setLevel(p);
 

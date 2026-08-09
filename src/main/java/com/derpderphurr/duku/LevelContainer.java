@@ -29,6 +29,8 @@ public class LevelContainer extends Region {
         GridPane.setHgrow(playfieldStackPane, Priority.ALWAYS);
         GridPane.setVgrow(playfieldStackPane, Priority.ALWAYS);
 
+        this.prefWidth(800);
+
         gp.prefWidthProperty().bind(this.widthProperty());
         gp.setMaxSize(Double.MAX_VALUE,Double.MAX_VALUE);
 
