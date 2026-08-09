@@ -2,7 +2,6 @@ package com.derpderphurr.duku;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -13,10 +12,16 @@ public class Main extends Application {
         launch(args);
     }
 
+    private final LevelContainer lc = new LevelContainer();
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
-        vb.getChildren().add(new Level(8,2));
+        vb.getChildren().add(lc);
+
+        Playfield p = new Playfield(8,1);
+        lc.setLevel(p);
+
         primaryStage.setScene(new Scene(vb));
         primaryStage.show();
     }

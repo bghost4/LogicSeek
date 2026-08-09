@@ -21,7 +21,7 @@ public class Tile extends Region {
     private final Circle targetMark = new Circle();
     private Color color = DEFAULT_COLOR;
 
-    private final Level level;
+    private final Playfield level;
 
     //Logic
     //Target is wether this tile is a target
@@ -42,7 +42,7 @@ public class Tile extends Region {
         return col;
     }
 
-    public Tile(Level l,int x,int y) {
+    public Tile(Playfield l, int x, int y) {
         this.row = y;
         this.col = x;
         this.level = l;

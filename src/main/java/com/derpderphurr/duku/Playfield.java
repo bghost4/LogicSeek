@@ -1,5 +1,7 @@
 package com.derpderphurr.duku;
 
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
 import javafx.scene.layout.GridPane;
@@ -20,7 +22,7 @@ import java.util.Set;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
-public class Level extends Region {
+public class Playfield extends Region {
     private final GridPane gp = new GridPane();
     private final Tile[][] tiles;
     private final List<Tile> tileList;
@@ -33,7 +35,8 @@ public class Level extends Region {
     private final SimpleIntegerProperty score = new SimpleIntegerProperty(0);
     private final SimpleIntegerProperty foundTargets = new SimpleIntegerProperty(0);
     private final SimpleIntegerProperty misses = new SimpleIntegerProperty(0);
-
+    private final ReadOnlyIntegerWrapper sizeProp;
+    
     public static final Color[] REGION_COLORS = {
             Color.hsb(0,   0.45, 0.95), // pastel red
             Color.hsb(36,  0.45, 0.95), // pastel orange
@@ -235,7 +238,7 @@ public class Level extends Region {
 
     }
 
-    public Level(int size,long seed) {
+    public Playfield(int size, long seed) {
         this.size = size;
         this.seed = seed;
         this.rand = new Random(seed);
@@ -274,6 +277,21 @@ public class Level extends Region {
         //set up listeners for misses and targets
         foundTargets.addListener(il -> { if(foundTargets.get() == size) { levelComplete(); } } );
         misses.addListener( il -> { if(misses.get() > 2){ levelFailed(); } });
+        sizeProp = new ReadOnlyIntegerWrapper(size);
     }
 
+    public long getSeed() {
+        return seed;
+    }
+
+    public ReadOnlyIntegerProperty getSizeProperty() {
+        return sizeProp;
+    }
+
+    public ReadOnlyIntegerProperty missesProperty() { return misses; }
+    public ReadOnlyIntegerProperty foundTargetsProperty() { return foundTargets; }
+
+    public ReadOnlyIntegerProperty scoreProperty() {
+        return score;
+    }
 }
