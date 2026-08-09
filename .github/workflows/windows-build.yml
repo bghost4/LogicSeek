@@ -13,7 +13,7 @@ jobs:
     steps:
       # 1. Check out the source code
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 2. Set up the specific Java Development Kit (JDK)
       - name: Set up JDK 23
