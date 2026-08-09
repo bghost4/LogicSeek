@@ -220,11 +220,11 @@ public class Level extends Region {
     }
 
     public void targetMissed() {
-
+        this.misses.set(misses.get()+1);
     }
 
     public void targetFound() {
-
+        this.foundTargets.set(foundTargets.get()+1);
     }
 
     private void levelComplete() {
@@ -270,6 +270,10 @@ public class Level extends Region {
 
         buildLevel();
         this.levelTimer = System.currentTimeMillis();
+
+        //set up listeners for misses and targets
+        foundTargets.addListener(il -> { if(foundTargets.get() == size) { levelComplete(); } } );
+        misses.addListener( il -> { if(misses.get() > 2){ levelFailed(); } });
     }
 
 }

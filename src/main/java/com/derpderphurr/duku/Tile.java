@@ -91,21 +91,7 @@ public class Tile extends Region {
         setColor(color);
     }
 
-    public void markTarget() {
-        if(!solved) {
-            solved = true;
-            if(isTarget()) {
-                crossMark.setVisible(false);
-                targetMark.setVisible(true);
-            } else {
-                crossed = true;
-                crossLineA.setStroke(Color.RED);
-                crossLineB.setStroke(Color.RED);
-                crossMark.setVisible(true);
-            }
-        }
-        //ignore marking an already solved cell
-    }
+
 
     public int distance(int a,int b) {
         return Math.max(a,b) - Math.min(a,b);
@@ -115,6 +101,24 @@ public class Tile extends Region {
         int rowDistance = distance(getRow(),other.getRow());
         int colDistance = distance(getCol(),other.getCol());
         return (rowDistance < 2 && colDistance < 2);
+    }
+
+    public void markTarget() {
+        if(!solved) {
+            solved = true;
+            if(isTarget()) {
+                crossMark.setVisible(false);
+                targetMark.setVisible(true);
+                level.targetFound();
+            } else {
+                crossed = true;
+                crossLineA.setStroke(Color.RED);
+                crossLineB.setStroke(Color.RED);
+                crossMark.setVisible(true);
+                level.targetMissed();
+            }
+        }
+        //ignore marking an already solved cell
     }
 
     public void markCross() {
