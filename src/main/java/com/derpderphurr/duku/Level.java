@@ -52,6 +52,16 @@ public class Level extends Region {
         return neighbors;
     }
 
+    // This is a multi-source flood fill: think of it as dropping one seed of paint per color
+    // onto the board and letting all the puddles spread outward at the same time, one cell each
+    // per round, until they've covered the whole grid and are all touching each other's edges.
+    //
+    // Each region gets its own "frontier" - a queue of cells it's allowed to try claiming next
+    // (always cells that border a cell it already owns). Because a cell only ever enters a
+    // region's frontier by bordering that region, the first time it actually gets claimed it is
+    // guaranteed to be touching an existing cell of the same color - so a region can never end up
+    // as two disconnected islands, only ever a single connected blob (or a lone cell, if its
+    // frontier never wins a race - which is fine, a color may exist by itself).
     private void generateFill(List<Color> colors) {
         //fill in the colors
         //same colors must border on the top left bottom or right (a color may be a single tile)
@@ -61,7 +71,10 @@ public class Level extends Region {
         List<Tile> seeds = new ArrayList<>(tileList);
         Collections.shuffle(seeds, rand);
 
-        //grow every region outward in lockstep so no two same-colored blobs can end up disconnected
+        //claim one seed cell per color and stock its frontier with that seed's neighbors -
+        //shuffling the neighbors means growth picks a random direction each time instead of
+        //always expanding the same way, which is what makes the regions look organic/irregular
+        //rather than plain squares
         List<Deque<Tile>> frontiers = new ArrayList<>();
         for (int i = 0; i < colors.size() && i < seeds.size(); i++) {
             Tile seed = seeds.get(i);
@@ -71,6 +84,8 @@ public class Level extends Region {
             frontiers.add(new ArrayDeque<>(neighbors));
         }
 
+        //grow every region outward in lockstep, one cell per region per round, so regions expand
+        //at roughly the same pace instead of one color racing ahead and swallowing the board
         boolean grew = true;
         while (grew) {
             grew = false;
@@ -78,6 +93,9 @@ public class Level extends Region {
                 Deque<Tile> frontier = frontiers.get(i);
                 Color color = colors.get(i);
 
+                //pop candidates until we find one still unclaimed - a cell can sit in more than
+                //one region's frontier if it borders two colors, so whichever region gets there
+                //first wins and every other region just discards it when its turn comes around
                 Tile next = null;
                 while (!frontier.isEmpty()) {
                     Tile candidate = frontier.remove();
@@ -89,6 +107,8 @@ public class Level extends Region {
 
                 if (next != null) {
                     next.setColor(color);
+                    //this cell's neighbors become new growth candidates for the SAME region only,
+                    //which is exactly what keeps every color's cells connected to each other
                     List<Tile> neighbors = getOrthogonalNeighbors(next);
                     Collections.shuffle(neighbors, rand);
                     frontier.addAll(neighbors);
@@ -96,6 +116,9 @@ public class Level extends Region {
                 }
             }
         }
+        //once every frontier fails to produce an unclaimed cell in the same round, grew stays
+        //false and we stop - since the grid is fully connected, that only happens once every
+        //single cell has been claimed by some region
     }
 
     private void clearFill() {

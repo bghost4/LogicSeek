@@ -92,6 +92,7 @@ public class Tile extends Region {
         if(!solved) {
             solved = true;
             if(isTarget()) {
+                crossMark.setVisible(false);
                 targetMark.setVisible(true);
             } else {
                 crossed = true;
