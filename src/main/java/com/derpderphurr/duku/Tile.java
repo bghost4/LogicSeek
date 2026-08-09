@@ -1,9 +1,12 @@
 package com.derpderphurr.duku;
 
+import javafx.scene.Group;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 
 public class Tile extends Region {
@@ -11,6 +14,11 @@ public class Tile extends Region {
     //Visual Elements
     public static final Color DEFAULT_COLOR = Color.LIGHTGRAY;
     private final Rectangle rect = new Rectangle();
+    //overlay marks drawn on top of rect, so the tile's region color always stays visible underneath
+    private final Line crossLineA = new Line();
+    private final Line crossLineB = new Line();
+    private final Group crossMark = new Group(crossLineA, crossLineB);
+    private final Circle targetMark = new Circle();
     private Color color = DEFAULT_COLOR;
 
     //Logic
@@ -52,7 +60,31 @@ public class Tile extends Region {
 
         rect.setOnMouseClicked(this::handleClick);
 
-        this.getChildren().add(rect);
+        //X mark for crossed-off tiles / wrong guesses (color set depending on which)
+        crossLineA.startXProperty().bind(rect.widthProperty().multiply(0.25));
+        crossLineA.startYProperty().bind(rect.heightProperty().multiply(0.25));
+        crossLineA.endXProperty().bind(rect.widthProperty().multiply(0.75));
+        crossLineA.endYProperty().bind(rect.heightProperty().multiply(0.75));
+        crossLineB.startXProperty().bind(rect.widthProperty().multiply(0.75));
+        crossLineB.startYProperty().bind(rect.heightProperty().multiply(0.25));
+        crossLineB.endXProperty().bind(rect.widthProperty().multiply(0.25));
+        crossLineB.endYProperty().bind(rect.heightProperty().multiply(0.75));
+        crossLineA.strokeWidthProperty().bind(rect.widthProperty().multiply(0.08));
+        crossLineB.strokeWidthProperty().bind(rect.widthProperty().multiply(0.08));
+        crossMark.setMouseTransparent(true);
+        crossMark.setVisible(false);
+
+        //Circle mark for a correctly found target
+        targetMark.centerXProperty().bind(rect.widthProperty().multiply(0.5));
+        targetMark.centerYProperty().bind(rect.heightProperty().multiply(0.5));
+        targetMark.radiusProperty().bind(rect.widthProperty().multiply(0.3));
+        targetMark.setFill(Color.TRANSPARENT);
+        targetMark.setStroke(Color.DARKGREEN);
+        targetMark.strokeWidthProperty().bind(rect.widthProperty().multiply(0.06));
+        targetMark.setMouseTransparent(true);
+        targetMark.setVisible(false);
+
+        this.getChildren().addAll(rect, crossMark, targetMark);
         setColor(color);
     }
 
@@ -60,10 +92,12 @@ public class Tile extends Region {
         if(!solved) {
             solved = true;
             if(isTarget()) {
-                setColor(Color.LIGHTGREEN);
+                targetMark.setVisible(true);
             } else {
-                markCross();
-                setColor(Color.DARKRED);
+                crossed = true;
+                crossLineA.setStroke(Color.RED);
+                crossLineB.setStroke(Color.RED);
+                crossMark.setVisible(true);
             }
         }
         //ignore marking an already solved cell
@@ -81,17 +115,11 @@ public class Tile extends Region {
 
     public void markCross() {
         if(!solved) {
-            if(!crossed) {
-                crossed = true;
-                rect.setFill(Color.DARKGRAY);
-            } else {
-                clearCross();
-            }
+            crossed = !crossed;
+            crossLineA.setStroke(Color.BLACK);
+            crossLineB.setStroke(Color.BLACK);
+            crossMark.setVisible(crossed);
         }
-    }
-
-    public void clearCross() {
-        setColor(color); //Temp until i get drawing in order
     }
 
     private void handleClick(MouseEvent e) {
