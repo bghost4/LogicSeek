@@ -5,16 +5,18 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.RadialGradient;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -53,7 +55,6 @@ public class Level extends Region {
         for(int i=0; i < size; i++ ) {
             tiles[unusedColumns.get(i)][unusedRows.get(i)].setTarget(true);
         }
-
     }
 
     private void clearTargets() {
@@ -74,18 +75,17 @@ public class Level extends Region {
     private void generateFill(List<Color> colors) {
         //fill in the colors
         //same colors must border on the top left bottom or right (a color may be a single tile)
-        List<Tile> unfilled = new ArrayList<>(tileList);
-        Collections.shuffle(unfilled, rand);
 
-        //seed each color with one random tile, then grow every region outward in lockstep
-        //so no two same-colored blobs can end up disconnected
+        //seed each color at one of the (already-verified) targets, so every region is
+        //guaranteed exactly one target without a separate per-color check afterward
+        List<Tile> seeds = new ArrayList<>(tileList.stream().filter(Tile::isTarget).toList());
+        Collections.shuffle(seeds, rand);
+
+        //grow every region outward in lockstep so no two same-colored blobs can end up disconnected
         List<Deque<Tile>> frontiers = new ArrayList<>();
-        for (Color color : colors) {
-            if (unfilled.isEmpty()) {
-                break;
-            }
-            Tile seed = unfilled.remove(unfilled.size() - 1);
-            seed.setColor(color);
+        for (int i = 0; i < colors.size() && i < seeds.size(); i++) {
+            Tile seed = seeds.get(i);
+            seed.setColor(colors.get(i));
             List<Tile> neighbors = getOrthogonalNeighbors(seed);
             Collections.shuffle(neighbors, rand);
             frontiers.add(new ArrayDeque<>(neighbors));
@@ -118,13 +118,77 @@ public class Level extends Region {
         }
     }
 
-    private void buildLevel() {
+    private void clearFill() {
+        tileList.forEach(t -> t.setColor(Tile.DEFAULT_COLOR));
+    }
 
-        //choose colors & fill in the regions first, so target placement can be verified against them
-        List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
-        Collections.shuffle(palette, rand);
-        List<Color> colors = palette.subList(0, Math.min(size, palette.size()));
-        generateFill(colors);
+    private boolean sharesConstraint(Tile a, Tile b) {
+        return a.getRow() == b.getRow()
+                || a.getCol() == b.getCol()
+                || a.getColor().equals(b.getColor())
+                || a.isNeighbor(b);
+    }
+
+    //If a row/column/region is down to one remaining candidate, that cell must be a target
+    private boolean trySingleton(List<Tile> group, Set<Tile> candidates, Set<Tile> solved) {
+        if (group.size() != 1) { return false; }
+        Tile target = group.get(0);
+        if (!candidates.contains(target)) { return false; }
+
+        solved.add(target);
+        candidates.remove(target);
+        candidates.removeIf(other -> sharesConstraint(target, other));
+        return true;
+    }
+
+    //If a region's remaining candidates are all on the same row/column, that row/column's target
+    //has to come from this region, so every other region's candidate on that line can be eliminated
+    private boolean tryConfinement(List<Tile> group, Set<Tile> candidates, ToIntFunction<Tile> lineOf) {
+        if (group.isEmpty()) { return false; }
+        int line = lineOf.applyAsInt(group.get(0));
+        boolean confinedToLine = group.stream().mapToInt(lineOf).allMatch(l -> l == line);
+        if (!confinedToLine) { return false; }
+
+        Color color = group.get(0).getColor();
+        List<Tile> eliminated = candidates.stream()
+                .filter(t -> lineOf.applyAsInt(t) == line && !t.getColor().equals(color))
+                .toList();
+        if (eliminated.isEmpty()) { return false; }
+
+        candidates.removeAll(eliminated);
+        return true;
+    }
+
+    //Simulates the deductions a player is allowed to make (no guessing/backtracking) to check
+    //that every target can be found by process of elimination alone
+    private boolean isSolvableByElimination() {
+        Set<Tile> candidates = new HashSet<>(tileList);
+        Set<Tile> solved = new HashSet<>();
+
+        boolean progress = true;
+        while (progress) {
+            progress = false;
+
+            for (int i = 0; i < size; i++) {
+                final int fi = i;
+                progress |= trySingleton(candidates.stream().filter(t -> t.getRow() == fi).toList(), candidates, solved);
+                progress |= trySingleton(candidates.stream().filter(t -> t.getCol() == fi).toList(), candidates, solved);
+            }
+
+            Map<Color, List<Tile>> byColor = candidates.stream().collect(Collectors.groupingBy(Tile::getColor));
+            for (List<Tile> group : byColor.values()) {
+                progress |= trySingleton(group, candidates, solved);
+            }
+            for (List<Tile> group : byColor.values()) {
+                progress |= tryConfinement(group, candidates, Tile::getRow);
+                progress |= tryConfinement(group, candidates, Tile::getCol);
+            }
+        }
+
+        return solved.size() == size;
+    }
+
+    private void buildLevel() {
 
         buildTargets();
         int iterations = 1;
@@ -133,6 +197,20 @@ public class Level extends Region {
             iterations++;
         }
         System.out.printf("Took %d iterations to build level%n",iterations);
+
+        //choose colors, then fill regions outward from the now-verified targets
+        List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
+        Collections.shuffle(palette, rand);
+        List<Color> colors = palette.subList(0, Math.min(size, palette.size()));
+
+        generateFill(colors);
+        int fillIterations = 1;
+        while (!isSolvableByElimination()) {
+            clearFill();
+            generateFill(colors);
+            fillIterations++;
+        }
+        System.out.printf("Took %d iterations to build a fill solvable by elimination%n", fillIterations);
     }
 
     public Level(int size,long seed) {
@@ -189,12 +267,7 @@ public class Level extends Region {
         List<Tile> targets = tileList.stream().filter(Tile::isTarget).toList();
         if(targets.stream().anyMatch(t -> getNeighbors(t).filter(Tile::isTarget).count() > 1)) { return false; }
 
-        //Check only one target per color
-        long regionCount = tileList.stream().map(Tile::getColor).distinct().count();
-        Map<Color, Long> targetsPerColor = targets.stream()
-                .collect(Collectors.groupingBy(Tile::getColor, Collectors.counting()));
-        if (targetsPerColor.size() != regionCount) { return false; }
-        if (targetsPerColor.values().stream().anyMatch(count -> count != 1)) { return false; }
+        //One target per color is now guaranteed by generateFill seeding each region at a target
 
         return true;
     }

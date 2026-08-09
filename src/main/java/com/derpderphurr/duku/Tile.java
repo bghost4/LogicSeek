@@ -82,6 +82,7 @@ public class Tile extends Region {
     public void markCross() {
         if(!solved) {
             if(!crossed) {
+                crossed = true;
                 rect.setFill(Color.DARKGRAY);
             } else {
                 clearCross();
