@@ -37,16 +37,18 @@ public class Playfield extends Region {
     private final ReadOnlyIntegerWrapper sizeProp;
     
     public static final Color[] REGION_COLORS = {
-            Color.hsb(0,   0.45, 0.95), // pastel red
-            Color.hsb(36,  0.45, 0.95), // pastel orange
-            Color.hsb(72,  0.45, 0.95), // pastel yellow-green
-            Color.hsb(108, 0.45, 0.95), // pastel green
-            Color.hsb(144, 0.45, 0.95), // pastel spring green/teal
-            Color.hsb(180, 0.45, 0.95), // pastel cyan
-            Color.hsb(216, 0.45, 0.95), // pastel blue
-            Color.hsb(252, 0.45, 0.95), // pastel indigo/violet
-            Color.hsb(288, 0.45, 0.95), // pastel magenta
-            Color.hsb(324, 0.45, 0.95), // pastel rose/pink
+            Color.web("#e6194b"), // red
+            Color.web("#f58231"), // orange
+            Color.web("#ffe119"), // yellow
+            Color.web("#bfef45"), // lime
+            Color.web("#3cb44b"), // green
+            Color.web("#469990"), // teal
+            Color.web("#42d4f4"), // cyan
+            Color.web("#4363d8"), // blue
+            Color.web("#000075"), // navy
+            Color.web("#911eb4"), // purple
+            Color.web("#f032e6"), // magenta
+            Color.web("#9a6324"), // brown
     };
 
     private List<Tile> getOrthogonalNeighbors(Tile root) {

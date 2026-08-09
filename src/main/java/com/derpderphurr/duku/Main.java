@@ -19,7 +19,7 @@ public class Main extends Application {
         VBox vb = new VBox();
         vb.getChildren().add(lc);
         primaryStage.setWidth(800);
-        Playfield p = new Playfield(8,1);
+        Playfield p = new Playfield(6,1);
         lc.setLevel(p);
 
         primaryStage.setScene(new Scene(vb));
