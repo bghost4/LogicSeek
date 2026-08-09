@@ -1,5 +1,6 @@
 package com.derpderphurr.duku;
 
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -27,8 +28,9 @@ public class Tile extends Region {
     private boolean target = false;
     //solved is used for if a user marks as a target and true, show the target in cell
     //if user marks as target and target is false, set the cross flag and solved flag
-    private boolean solved = false; // works with target
-    private boolean crossed = false; // when a user marks as not a target
+    private final SimpleBooleanProperty solved = new SimpleBooleanProperty(false); // works with target
+    private final SimpleBooleanProperty crossed = new SimpleBooleanProperty(false); // when a user marks as not a target
+    private final SimpleBooleanProperty found = new SimpleBooleanProperty(false);
 
     //where the cell lives on the grid
     private final int row,col;
@@ -86,6 +88,9 @@ public class Tile extends Region {
         targetMark.setMouseTransparent(true);
         targetMark.setVisible(false);
 
+        crossMark.visibleProperty().bind(crossed);
+        targetMark.visibleProperty().bind(found);
+
         this.getChildren().addAll(rect, crossMark, targetMark);
         setColor(color);
     }
@@ -101,34 +106,27 @@ public class Tile extends Region {
     }
 
     public void markTarget() {
-        if(!solved) {
-            solved = true;
-            if(isTarget()) {
-                crossMark.setVisible(false);
-                targetMark.setVisible(true);
-                level.targetFound();
-            } else {
-                crossed = true;
-                crossLineA.setStroke(Color.RED);
-                crossLineB.setStroke(Color.RED);
-                crossMark.setVisible(true);
-                level.targetMissed();
-            }
+        if(isTarget()) {
+            found.set(true);
+            solved.set(true);
+            crossed.set(false);
+            level.targetFound();
+        } else {
+            crossed.set(true);
+            crossLineA.setStroke(Color.RED);
+            crossLineB.setStroke(Color.RED);
+            level.targetMissed();
         }
-        //ignore marking an already solved cell
     }
 
     public void markCross() {
-        if(!solved) {
-            crossed = !crossed;
-            crossLineA.setStroke(Color.BLACK);
-            crossLineB.setStroke(Color.BLACK);
-            crossMark.setVisible(crossed);
-        }
+        crossed.set(!crossed.get());
+        crossLineA.setStroke(Color.BLACK);
+        crossLineB.setStroke(Color.BLACK);
     }
 
     private void handleClick(MouseEvent e) {
-        System.out.printf("Handled Click (%d,%d) :: %s%n",col,row,color.toString());
+        if(solved.get()) { return; }
         if(e.getButton() == MouseButton.PRIMARY) {
             if (e.getClickCount() == 2) {
                 markTarget();
@@ -158,7 +156,8 @@ public class Tile extends Region {
     }
 
     public void reset() {
-        this.crossed = false;
-        this.solved = false;
+        this.solved.set(false);
+        this.crossed.set(false);
+        this.found.set(false);
     }
 }

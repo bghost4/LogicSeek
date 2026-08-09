@@ -26,7 +26,7 @@ public class Playfield extends Region {
     private final Tile[][] tiles;
     private final List<Tile> tileList;
     private final int size;
-    private final long levelTimer;
+    private long levelTimer;
     private double gap = 5;
     private final long seed;
     private final Random rand;
@@ -201,8 +201,11 @@ public class Playfield extends Region {
         return solved;
     }
 
-    private void reset() {
+    public void reset() {
         tileList.forEach(Tile::reset);
+        foundTargets.set(0);
+        misses.set(0);
+        levelTimer = System.currentTimeMillis();
     }
 
     private void buildLevel() {

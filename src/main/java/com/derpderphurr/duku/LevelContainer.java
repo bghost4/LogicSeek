@@ -51,7 +51,8 @@ public class LevelContainer extends Region {
                 lblTargetStats.textProperty().bind(Bindings.format("Targets: %d/%d",nv.foundTargetsProperty(),nv.getSizeProperty()));
                 lblMisses.textProperty().bind(Bindings.format("Misses: %d/%d",nv.missesProperty(),3));
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
-
+                nv.onLevelFailedProperty().set(Playfield::reset);
+                nv.onLevelCompleteProperty().set(p -> this.setLevel(new Playfield(8,p.getSeed()+1)));
             }
         } );
     }
