@@ -38,7 +38,7 @@ jobs:
 
       # 6. Upload your build artifacts so you can download them from GitHub
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Windows-App-Distributions
           path: |
