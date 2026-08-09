@@ -24,7 +24,6 @@ public class Tile extends Region {
     private final Playfield level;
 
     //Logic
-    //Target is wether this tile is a target
     private boolean target = false;
     //solved is used for if a user marks as a target and true, show the target in cell
     //if user marks as target and target is false, set the cross flag and solved flag
@@ -90,8 +89,6 @@ public class Tile extends Region {
         this.getChildren().addAll(rect, crossMark, targetMark);
         setColor(color);
     }
-
-
 
     public int distance(int a,int b) {
         return Math.max(a,b) - Math.min(a,b);
@@ -160,4 +157,8 @@ public class Tile extends Region {
         this.target = target;
     }
 
+    public void reset() {
+        this.crossed = false;
+        this.solved = false;
+    }
 }

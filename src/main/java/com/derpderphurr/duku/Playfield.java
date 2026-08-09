@@ -1,8 +1,6 @@
 package com.derpderphurr.duku;
 
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.*;
 import javafx.geometry.Insets;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -19,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
@@ -202,6 +201,10 @@ public class Playfield extends Region {
         return solved;
     }
 
+    private void reset() {
+        tileList.forEach(Tile::reset);
+    }
+
     private void buildLevel() {
         //choose colors, then keep growing fresh region partitions until one is fully
         //derivable by elimination alone - that derived set becomes the targets
@@ -230,13 +233,11 @@ public class Playfield extends Region {
         this.foundTargets.set(foundTargets.get()+1);
     }
 
-    private void levelComplete() {
+    private final SimpleObjectProperty<Consumer<Playfield>> onLevelComplete = new SimpleObjectProperty<>(l -> {});
+    private final SimpleObjectProperty<Consumer<Playfield>> onLevelFailed = new SimpleObjectProperty<>(l -> {});
 
-    }
-
-    private void levelFailed() {
-
-    }
+    public ObjectProperty<Consumer<Playfield>> onLevelCompleteProperty() { return onLevelComplete; }
+    public ObjectProperty<Consumer<Playfield>> onLevelFailedProperty() { return onLevelFailed; }
 
     public Playfield(int size, long seed) {
         this.size = size;
@@ -275,8 +276,8 @@ public class Playfield extends Region {
         this.levelTimer = System.currentTimeMillis();
 
         //set up listeners for misses and targets
-        foundTargets.addListener(il -> { if(foundTargets.get() == size) { levelComplete(); } } );
-        misses.addListener( il -> { if(misses.get() > 2){ levelFailed(); } });
+        foundTargets.addListener(il -> { if(foundTargets.get() == size) { onLevelComplete.get().accept(this); } } );
+        misses.addListener( il -> { if(misses.get() > 2){ onLevelFailed.get().accept(this); } });
         sizeProp = new ReadOnlyIntegerWrapper(size);
     }
 
