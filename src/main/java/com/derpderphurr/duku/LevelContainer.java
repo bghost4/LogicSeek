@@ -5,6 +5,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 
+import java.util.Objects;
+
 public class LevelContainer extends Region {
 
     private final SimpleObjectProperty<Playfield> playfield = new SimpleObjectProperty<>();
@@ -15,6 +17,22 @@ public class LevelContainer extends Region {
     private final StackPane playfieldStackPane = new StackPane();
 
     public LevelContainer() {
+
+        String cssUrl = Objects.requireNonNull(getClass().getResource("/LevelContainer.css")).toExternalForm();
+        this.getStylesheets().add(cssUrl);
+
+        lblLevelSeed.getStyleClass().add("seed-label");
+        lblLevelSeed.setMaxWidth(Double.MAX_VALUE);
+
+        lblTargetStats.getStyleClass().add("targetstats-label");
+        lblTargetStats.setMaxWidth(Double.MAX_VALUE);
+
+        lblScore.getStyleClass().add("score-label");
+        lblScore.setMaxWidth(Double.MAX_VALUE);
+
+        lblMisses.getStyleClass().add("misses-label");
+        lblMisses.setMaxWidth(Double.MAX_VALUE);
+
         GridPane gp = new GridPane();
 
         GridPane.setHgrow(lblLevelSeed,Priority.ALWAYS);
@@ -61,6 +79,7 @@ public class LevelContainer extends Region {
 
 
     public void setLevel(Playfield p) {
+        GamePrefs.saveLastLevel(p.getSeed(), p.getSizeProperty().get());
         this.playfield.set(p);
     }
 }

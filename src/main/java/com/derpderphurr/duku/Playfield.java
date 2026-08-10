@@ -27,9 +27,24 @@ public class Playfield extends Region {
     private final List<Tile> tileList;
     private final int size;
     private long levelTimer;
+    private long lastFindTime;
+    private double multiplier = 1.0;
+    private int comboStreak = 0;
     private double gap = 5;
     private final long seed;
     private final Random rand;
+
+    private static final int BASE_POINTS = 100;
+    private static final double PER_CELL_WINDOW_MS = 3000;
+    private static final double MIN_WINDOW_FRACTION = 0.3;
+    private static final double MAX_MULTIPLIER = 2.5;
+
+    // Derived once per level from size: the window shrinks each find so the last target of the
+    // level always gets MIN_WINDOW_FRACTION of the first target's window, and a flawless run
+    // always tops out at exactly MAX_MULTIPLIER by the final target, regardless of level size.
+    private double initialWindowMs;
+    private double decayRate;
+    private double comboStep;
 
     private final SimpleIntegerProperty score = new SimpleIntegerProperty(0);
     private final SimpleIntegerProperty foundTargets = new SimpleIntegerProperty(0);
@@ -207,7 +222,11 @@ public class Playfield extends Region {
         tileList.forEach(Tile::reset);
         foundTargets.set(0);
         misses.set(0);
+        score.set(0);
+        multiplier = 1.0;
+        comboStreak = 0;
         levelTimer = System.currentTimeMillis();
+        lastFindTime = levelTimer;
     }
 
     private void buildLevel() {
@@ -232,9 +251,23 @@ public class Playfield extends Region {
 
     public void targetMissed() {
         this.misses.set(misses.get()+1);
+        comboStreak = 0;
+        multiplier = 1.0;
     }
 
     public void targetFound() {
+        long now = System.currentTimeMillis();
+        long elapsed = now - lastFindTime;
+        double window = initialWindowMs * Math.pow(decayRate, foundTargets.get());
+        double speedBonus = Math.max(0, BASE_POINTS * (1 - elapsed / window));
+        score.set(score.get() + (int) Math.round((BASE_POINTS + speedBonus) * multiplier));
+
+        if (elapsed <= window) {
+            comboStreak++;
+            multiplier = Math.min(MAX_MULTIPLIER, 1.0 + comboStreak * comboStep);
+        }
+
+        lastFindTime = now;
         this.foundTargets.set(foundTargets.get()+1);
     }
 
@@ -248,6 +281,10 @@ public class Playfield extends Region {
         this.size = size;
         this.seed = seed;
         this.rand = new Random(seed);
+
+        this.initialWindowMs = PER_CELL_WINDOW_MS * size;
+        this.decayRate = size > 1 ? Math.pow(MIN_WINDOW_FRACTION, 1.0 / (size - 1)) : 1.0;
+        this.comboStep = (MAX_MULTIPLIER - 1.0) / size;
 
         tileList = new ArrayList<>(size*size);
         this.getChildren().add(gp);

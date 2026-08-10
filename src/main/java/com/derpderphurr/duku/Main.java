@@ -18,11 +18,25 @@ public class Main extends Application {
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
         vb.getChildren().add(lc);
-        primaryStage.setWidth(800);
-        Playfield p = new Playfield(6,1);
+
+        long seed = GamePrefs.getLastSeed(1);
+        int size = GamePrefs.getLastSize(6);
+        Playfield p = new Playfield(size, seed);
         lc.setLevel(p);
 
         primaryStage.setScene(new Scene(vb));
+
+        double x = GamePrefs.getWindowX(Double.NaN);
+        double y = GamePrefs.getWindowY(Double.NaN);
+        double height = GamePrefs.getWindowHeight(Double.NaN);
+        if (!Double.isNaN(x)) primaryStage.setX(x);
+        if (!Double.isNaN(y)) primaryStage.setY(y);
+        if (!Double.isNaN(height)) primaryStage.setHeight(height);
+        primaryStage.setWidth(GamePrefs.getWindowWidth(800));
+
+        primaryStage.setOnCloseRequest(e -> GamePrefs.saveWindowBounds(
+                primaryStage.getX(), primaryStage.getY(), primaryStage.getWidth(), primaryStage.getHeight()));
+
         primaryStage.show();
     }
 }
