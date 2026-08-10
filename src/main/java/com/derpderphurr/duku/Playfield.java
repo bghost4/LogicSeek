@@ -30,6 +30,7 @@ public class Playfield extends Region {
     private long lastFindTime;
     private double multiplier = 1.0;
     private int comboStreak = 0;
+    private double difficultyScore;
     private double gap = 5;
     private final long seed;
     private final Random rand;
@@ -187,13 +188,25 @@ public class Playfield extends Region {
         return true;
     }
 
+    //Difficulty rating: singleton deductions are close to trivial for a player to spot, while
+    //confinement deductions take real work, so confinement is weighted much heavier when scoring
+    //how hard a level was to derive by elimination alone.
+    private static final double SINGLETON_WEIGHT = 1.0;
+    private static final double CONFINEMENT_WEIGHT = 3.0;
+
+    private int singletonHits;
+    private int confinementHits;
+
     //Derives which cells must be targets using only the deductions a player is allowed to make
     //(no guessing/backtracking): a row/column/region down to one candidate is forced, and a
     //region confined to one row/column rules out every other region's candidates on that line.
     //Runs purely off the color structure, so it works whether or not any targets are set yet.
+    //Also tallies how many times each deduction rule fired, for use as a difficulty rating.
     private Set<Tile> solve() {
         Set<Tile> candidates = new HashSet<>(tileList);
         Set<Tile> solved = new HashSet<>();
+        singletonHits = 0;
+        confinementHits = 0;
 
         boolean progress = true;
         while (progress) {
@@ -201,17 +214,17 @@ public class Playfield extends Region {
 
             for (int i = 0; i < size; i++) {
                 final int fi = i;
-                progress |= trySingleton(candidates.stream().filter(t -> t.getRow() == fi).toList(), candidates, solved);
-                progress |= trySingleton(candidates.stream().filter(t -> t.getCol() == fi).toList(), candidates, solved);
+                if (trySingleton(candidates.stream().filter(t -> t.getRow() == fi).toList(), candidates, solved)) { singletonHits++; progress = true; }
+                if (trySingleton(candidates.stream().filter(t -> t.getCol() == fi).toList(), candidates, solved)) { singletonHits++; progress = true; }
             }
 
             Map<Color, List<Tile>> byColor = candidates.stream().collect(Collectors.groupingBy(Tile::getColor));
             for (List<Tile> group : byColor.values()) {
-                progress |= trySingleton(group, candidates, solved);
+                if (trySingleton(group, candidates, solved)) { singletonHits++; progress = true; }
             }
             for (List<Tile> group : byColor.values()) {
-                progress |= tryConfinement(group, candidates, Tile::getRow);
-                progress |= tryConfinement(group, candidates, Tile::getCol);
+                if (tryConfinement(group, candidates, Tile::getRow)) { confinementHits++; progress = true; }
+                if (tryConfinement(group, candidates, Tile::getCol)) { confinementHits++; progress = true; }
             }
         }
 
@@ -246,6 +259,7 @@ public class Playfield extends Region {
             iterations++;
         }
         targets.forEach(t -> t.setTarget(true));
+        difficultyScore = singletonHits * SINGLETON_WEIGHT + confinementHits * CONFINEMENT_WEIGHT;
         System.out.printf("Took %d iterations to build a level solvable by elimination%n", iterations);
     }
 
@@ -336,5 +350,9 @@ public class Playfield extends Region {
 
     public ReadOnlyIntegerProperty scoreProperty() {
         return score;
+    }
+
+    public double getDifficultyScore() {
+        return difficultyScore;
     }
 }

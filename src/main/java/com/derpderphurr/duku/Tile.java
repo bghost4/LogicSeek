@@ -18,7 +18,12 @@ public class Tile extends Region {
     //overlay marks drawn on top of rect, so the tile's region color always stays visible underneath
     private final Line crossLineA = new Line();
     private final Line crossLineB = new Line();
-    private final Group crossMark = new Group(crossLineA, crossLineB);
+    //wider, white copies drawn behind the marks above so they read as a light border, since
+    //dark region colors can otherwise swallow a plain black/dark-green mark
+    private final Line crossOutlineA = new Line();
+    private final Line crossOutlineB = new Line();
+    private final Group crossMark = new Group(crossOutlineA, crossOutlineB, crossLineA, crossLineB);
+    private final Circle targetOutline = new Circle();
     private final Circle targetMark = new Circle();
     private Color color = DEFAULT_COLOR;
 
@@ -78,6 +83,20 @@ public class Tile extends Region {
         crossMark.setMouseTransparent(true);
         crossMark.setVisible(false);
 
+        //outline copies share the same endpoints as the marks they sit behind, just wider and white
+        crossOutlineA.startXProperty().bind(crossLineA.startXProperty());
+        crossOutlineA.startYProperty().bind(crossLineA.startYProperty());
+        crossOutlineA.endXProperty().bind(crossLineA.endXProperty());
+        crossOutlineA.endYProperty().bind(crossLineA.endYProperty());
+        crossOutlineB.startXProperty().bind(crossLineB.startXProperty());
+        crossOutlineB.startYProperty().bind(crossLineB.startYProperty());
+        crossOutlineB.endXProperty().bind(crossLineB.endXProperty());
+        crossOutlineB.endYProperty().bind(crossLineB.endYProperty());
+        crossOutlineA.strokeWidthProperty().bind(rect.widthProperty().multiply(0.16));
+        crossOutlineB.strokeWidthProperty().bind(rect.widthProperty().multiply(0.16));
+        crossOutlineA.setStroke(Color.WHITE);
+        crossOutlineB.setStroke(Color.WHITE);
+
         //Circle mark for a correctly found target
         targetMark.centerXProperty().bind(rect.widthProperty().multiply(0.5));
         targetMark.centerYProperty().bind(rect.heightProperty().multiply(0.5));
@@ -88,10 +107,19 @@ public class Tile extends Region {
         targetMark.setMouseTransparent(true);
         targetMark.setVisible(false);
 
+        targetOutline.centerXProperty().bind(targetMark.centerXProperty());
+        targetOutline.centerYProperty().bind(targetMark.centerYProperty());
+        targetOutline.radiusProperty().bind(targetMark.radiusProperty());
+        targetOutline.setFill(Color.TRANSPARENT);
+        targetOutline.setStroke(Color.WHITE);
+        targetOutline.strokeWidthProperty().bind(rect.widthProperty().multiply(0.11));
+        targetOutline.setMouseTransparent(true);
+        targetOutline.visibleProperty().bind(found);
+
         crossMark.visibleProperty().bind(crossed);
         targetMark.visibleProperty().bind(found);
 
-        this.getChildren().addAll(rect, crossMark, targetMark);
+        this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
         setColor(color);
     }
 

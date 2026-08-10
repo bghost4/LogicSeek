@@ -11,6 +11,7 @@ public class LevelContainer extends Region {
 
     private final SimpleObjectProperty<Playfield> playfield = new SimpleObjectProperty<>();
     private final Label lblLevelSeed = new Label();
+    private final Label lblDifficulty = new Label();
     private final Label lblTargetStats = new Label();
     private final Label lblMisses = new Label();
     private final Label lblScore = new Label();
@@ -24,6 +25,9 @@ public class LevelContainer extends Region {
         lblLevelSeed.getStyleClass().add("seed-label");
         lblLevelSeed.setMaxWidth(Double.MAX_VALUE);
 
+        lblDifficulty.getStyleClass().add("difficulty-label");
+        lblDifficulty.setMaxWidth(Double.MAX_VALUE);
+
         lblTargetStats.getStyleClass().add("targetstats-label");
         lblTargetStats.setMaxWidth(Double.MAX_VALUE);
 
@@ -36,11 +40,13 @@ public class LevelContainer extends Region {
         GridPane gp = new GridPane();
 
         GridPane.setHgrow(lblLevelSeed,Priority.ALWAYS);
+        GridPane.setHgrow(lblDifficulty,Priority.ALWAYS);
         GridPane.setHgrow(lblTargetStats,Priority.ALWAYS);
         GridPane.setHgrow(lblMisses,Priority.ALWAYS);
         GridPane.setHgrow(lblScore,Priority.ALWAYS);
 
-        gp.add(lblLevelSeed,0,0,2,1);
+        gp.add(lblLevelSeed,0,0);
+        gp.add(lblDifficulty,1,0);
         gp.add(lblTargetStats,0,1);
         gp.add(lblMisses,1,1);
         gp.add(lblScore,0,2,2,1);
@@ -60,6 +66,7 @@ public class LevelContainer extends Region {
         playfield.addListener( (ob,ov,nv) -> {
             if(nv != null) {
                 lblLevelSeed.setText(String.format("LEVEL SEED: %d",nv.getSeed()));
+                lblDifficulty.setText(String.format("Difficulty: %.1f",nv.getDifficultyScore()));
 
                 lblTargetStats.textProperty().unbind();
                 lblMisses.textProperty().unbind();
