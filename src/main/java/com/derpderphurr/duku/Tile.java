@@ -28,7 +28,6 @@ public class Tile extends Region {
     private final Level level;
 
     //Logic
-    private boolean target = false;
     //solved is used for if a user marks as a target and true, show the target in cell
     //if user marks as target and target is false, set the cross flag and solved flag
     private final SimpleBooleanProperty solved = new SimpleBooleanProperty(false); // works with target
@@ -121,16 +120,6 @@ public class Tile extends Region {
 
         this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
         rect.setFill(level.colorFor(cell.colorGroup));
-    }
-
-    public int distance(int a,int b) {
-        return Math.max(a,b) - Math.min(a,b);
-    }
-
-    public boolean isNeighbor(Tile other) {
-        int rowDistance = distance(getRow(),other.getRow());
-        int colDistance = distance(getCol(),other.getCol());
-        return (rowDistance < 2 && colDistance < 2);
     }
 
     public void markTarget() {
