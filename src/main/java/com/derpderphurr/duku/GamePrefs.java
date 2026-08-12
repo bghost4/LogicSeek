@@ -33,4 +33,12 @@ public class GamePrefs {
 
     public static long getLastSeed(long defaultValue) { return prefs.getLong(KEY_LAST_SEED, defaultValue); }
     public static int getLastSize(int defaultValue) { return prefs.getInt(KEY_LAST_SIZE, defaultValue); }
+
+    //Clears just the saved seed/size, leaving window bounds alone, so the next launch starts a
+    //brand new level (via Main's getLastSeed/getLastSize defaults) instead of resuming where the
+    //last session left off.
+    public static void resetLevel() {
+        prefs.remove(KEY_LAST_SEED);
+        prefs.remove(KEY_LAST_SIZE);
+    }
 }
