@@ -98,7 +98,7 @@ public final class PuzzleGenerator {
     //that seed->board mapping, so callers who need reproducible boards must pass the same value
     //every time (the no-arg overload below always uses DEFAULT_PARALLELISM for this reason).
     public static Result generateAnchoredParallel(int size, long seed) {
-        return generateWithParallel(size, seed, PuzzleGenerator::growWithAnchor, DEFAULT_PARALLELISM);
+        return generateWithParallel(size, seed, PuzzleGenerator::growWithAnchor);
     }
 
     //One fill-and-solve try: partition the board with `fill` (consuming `rand`), then ask Solver
@@ -163,19 +163,18 @@ public final class PuzzleGenerator {
     //every future in the batch even if an earlier one already succeeded. Only the batch itself
     //runs in parallel; the seed -> board mapping this produces is otherwise fixed, just different
     //from generateWith's (batchSize=1 falls back to it exactly, batchSize>1 does not match it).
-    private static Result generateWithParallel(int size, long seed, FillStrategy fill,
-                                                 int batchSize) {
-        if (batchSize <= 1) {
+    private static Result generateWithParallel(int size, long seed, FillStrategy fill) {
+        if (PuzzleGenerator.DEFAULT_PARALLELISM <= 1) {
             return generateWith(size, seed, fill);
         }
 
         Random master = new Random(seed);
-        ExecutorService pool = Executors.newFixedThreadPool(batchSize);
+        ExecutorService pool = Executors.newFixedThreadPool(PuzzleGenerator.DEFAULT_PARALLELISM);
         try {
             int iterations = 0;
             while (true) {
-                List<Future<Attempt>> futures = new ArrayList<>(batchSize);
-                for (int i = 0; i < batchSize; i++) {
+                List<Future<Attempt>> futures = new ArrayList<>(PuzzleGenerator.DEFAULT_PARALLELISM);
+                for (int i = 0; i < PuzzleGenerator.DEFAULT_PARALLELISM; i++) {
                     long subSeed = master.nextLong();
                     futures.add(pool.submit(() -> attempt(size, fill, new Random(subSeed))));
                 }
@@ -309,7 +308,7 @@ public final class PuzzleGenerator {
         boolean anchorIsRow = rand.nextBoolean();
         int colorCount = grid[0].length;
         int line = rand.nextInt(grid.length);
-        int runLength = Math.max(1, Math.min(2, grid.length - 1));
+        int runLength = Math.clamp(grid.length - 1, 1, 2);
         int start = rand.nextInt(grid.length - runLength + 1);
         int anchorColor = rand.nextInt(colorCount);
 
