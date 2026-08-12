@@ -94,20 +94,13 @@ public class Level extends Region {
     }
 
     //Generation/solving itself lives in PuzzleGenerator (no JavaFX dependency, so it can also run
-    //headless in DifficultySimulator) - this asks it for a board, then builds this level's Tiles
-    //directly from the generated Cells (each Tile is a view/controller over its own Cell - see
-    //Tile.getRow/getCol/colorFor).
-    private void buildLevel() {
-        // generateAnchored (one color deliberately confined to a line, everything else random)
-        // measured consistently faster than plain generate() across sizes 6-10 - roughly 1.5-3.4x
-        // fewer median reroll iterations, up to 5x fewer on the worst case, and about 2x less
-        // wall-clock time - without a meaningful difficulty-score difference. See PuzzleGenerator
-        // for both strategies; generate() is kept for reference/comparison in DifficultySimulator.
-        // The *Parallel variant races several reroll attempts per round on a thread pool, which
-        // still picks deterministically off `seed` (see generateWithParallel) but is not the same
-        // seed->board mapping as the single-threaded generateAnchored.
-        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchoredParallel(size, seed);
-
+    //headless in DifficultySimulator) - Level doesn't call it at all anymore. A Result is handed
+    //in already computed (see the constructor and LevelContainer.generateLevel, which runs
+    //generation on a background Task so the FX thread never blocks on it), and this just builds
+    //this level's Tiles directly from the generated Cells (each Tile is a view/controller over its
+    //own Cell - see Tile.getRow/getCol/colorFor). Level is the same kind of thing one level up:
+    //just the visual representation of a Result.
+    private void buildLevel(PuzzleGenerator.Result result) {
         //which hex color represents which color group is purely cosmetic and doesn't affect
         //difficulty, so it's picked here rather than inside the JavaFX-free generator. Stored as a
         //field (not a local) so Tile can look it up via colorFor() while it's being constructed.
@@ -163,13 +156,13 @@ public class Level extends Region {
     public ObjectProperty<Consumer<Level>> onLevelCompleteProperty() { return onLevelComplete; }
     public ObjectProperty<Consumer<Level>> onLevelFailedProperty() { return onLevelFailed; }
 
-    public Level(long seed) {
-        this(sizeForSeed(seed), seed);
-    }
-
-    public Level(int size, long seed) {
-        this.size = size;
-        this.seed = seed;
+    //Level is only ever built from an already-computed Result (see LevelContainer.generateLevel,
+    //which runs generation on a background Task) - it never triggers generation itself, so
+    //constructing one is cheap and safe to do on the FX thread. size/seed both come from the
+    //Result rather than being passed in separately, since Result already pins them together.
+    public Level(PuzzleGenerator.Result result) {
+        this.size = result.size();
+        this.seed = result.seed();
         this.rand = new Random(seed);
 
         this.initialWindowMs = PER_CELL_WINDOW_MS * size;
@@ -193,7 +186,7 @@ public class Level extends Region {
 
         tiles = new Tile[size][size];
 
-        buildLevel();
+        buildLevel(result);
         this.levelTimer = System.currentTimeMillis();
 
         //set up listeners for misses and targets
