@@ -91,7 +91,10 @@ public class Playfield extends Region {
         // fewer median reroll iterations, up to 5x fewer on the worst case, and about 2x less
         // wall-clock time - without a meaningful difficulty-score difference. See PuzzleGenerator
         // for both strategies; generate() is kept for reference/comparison in DifficultySimulator.
-        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchored(size, seed, colorCount);
+        // The *Parallel variant races several reroll attempts per round on a thread pool, which
+        // still picks deterministically off `seed` (see generateWithParallel) but is not the same
+        // seed->board mapping as the single-threaded generateAnchored.
+        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchoredParallel(size, seed, colorCount);
 
         //which hex color represents which color id is purely cosmetic and doesn't affect
         //difficulty, so it's picked here rather than inside the JavaFX-free generator

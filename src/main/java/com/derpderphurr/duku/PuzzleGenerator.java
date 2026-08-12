@@ -9,18 +9,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
 //JavaFX-free twin of Playfield's puzzle generation/solving logic - a plain function of
-//(size, seed, colorCount) to a Result. Exists so the difficulty model can be run in a tight loop
+//(size, seed) to a Result. Exists so the difficulty model can be run in a tight loop
 //(see DifficultySimulator) without booting the UI, and so Playfield and any simulation always
 //agree, since both call the exact same code.
+//
+//Board size doubles as the color count: the puzzle needs exactly one target per row, one per
+//column, and one per color, so a size-N board can only ever be solvable with exactly N colors -
+//there's no such thing as a valid board where they differ. That's why colorCount isn't a separate
+//parameter anywhere in this class; keeping it independent invites a caller to pass a mismatched
+//value, which isn't just wrong, it's unsolvable - the reroll loop in generateWith/
+//generateWithParallel would spin forever looking for a solution that can't exist.
 public final class PuzzleGenerator {
 
     private PuzzleGenerator() {}
 
-    public record Result(int size, long seed, int colorCount,
+    public record Result(int size, long seed,
                           int[][] colorGrid, boolean[][] targetGrid,
                           int iterations, int singletonHits, int confinementHits,
                           int sharedNeighborHits, int lockedSetHits, double difficultyScore) {}
@@ -58,13 +69,13 @@ public final class PuzzleGenerator {
     //`cells` partitioned by colorId (UNCLAIMED is not allowed to survive) when it returns.
     @FunctionalInterface
     private interface FillStrategy {
-        void apply(List<Cell> cells, Cell[][] grid, int colorCount, Random rand);
+        void apply(List<Cell> cells, Cell[][] grid, Random rand);
     }
 
     //Random-seed rejection sampling: pick random cells as seeds, grow, and hope the resulting
     //partition happens to be solvable by elimination (checked/rerolled by generateWith).
-    public static Result generate(int size, long seed, int colorCount) {
-        return generateWith(size, seed, colorCount, PuzzleGenerator::generateFill);
+    public static Result generate(int size, long seed) {
+        return generateWith(size, seed, PuzzleGenerator::generateFill);
     }
 
     //Constructive alternative: pick a valid target placement first, then grow each region from
@@ -80,8 +91,8 @@ public final class PuzzleGenerator {
     //out almost universally ambiguous instead of easier to solve. Kept here as a documented
     //negative result; excluded from DifficultySimulator's sweep since it would hang it. See
     //generateAnchored below for the strategy that grew out of this lesson.
-    public static Result generateConstructive(int size, long seed, int colorCount) {
-        return generateWith(size, seed, colorCount, PuzzleGenerator::growFromTargets);
+    public static Result generateConstructive(int size, long seed) {
+        return generateWith(size, seed, PuzzleGenerator::growFromTargets);
     }
 
     //Guarantees exactly ONE deliberate foothold instead of constructing the whole board: one
@@ -92,15 +103,31 @@ public final class PuzzleGenerator {
     //sharesConstraint, which can trigger further deductions) can carry the rest from that one
     //guaranteed start, without needing the entire partition to be favorable by luck the way
     //generate() does, and without removing the asymmetry generateConstructive's approach did.
-    public static Result generateAnchored(int size, long seed, int colorCount) {
-        return generateWith(size, seed, colorCount, PuzzleGenerator::growWithAnchor);
+    public static Result generateAnchored(int size, long seed) {
+        return generateWith(size, seed, PuzzleGenerator::growWithAnchor);
     }
 
-    //Shared driver: build the grid, keep asking the given fill strategy for a fresh partition
-    //until one is fully derivable by elimination alone, then package up the result. The two
-    //public generate*() methods differ only in which FillStrategy they pass in here.
-    private static Result generateWith(int size, long seed, int colorCount, FillStrategy fill) {
-        Random rand = new Random(seed);
+    //Parallelism used by the no-arg generateAnchoredParallel below. Deliberately a fixed constant
+    //rather than Runtime.getRuntime().availableProcessors(): the batch size changes which board a
+    //given seed produces (see generateWithParallel), so it has to be baked into the algorithm the
+    //same way `size`/`colorCount` are, not left to vary with whatever hardware happens to run it -
+    //otherwise the same seed would generate a different level on a different core count.
+    private static final int DEFAULT_PARALLELISM = 4;
+
+    //Parallel twin of generateAnchored: races `parallelism` reroll attempts per round on a thread
+    //pool instead of trying them one at a time. See generateWithParallel for how it stays
+    //deterministic (same seed -> same board) despite the concurrency. `parallelism` is part of
+    //that seed->board mapping, so callers who need reproducible boards must pass the same value
+    //every time (the no-arg overload below always uses DEFAULT_PARALLELISM for this reason).
+    public static Result generateAnchoredParallel(int size, long seed, int parallelism) {
+        return generateWithParallel(size, seed, PuzzleGenerator::growWithAnchor, parallelism);
+    }
+
+    //One fill-and-solve try: partition the board with `fill` (consuming `rand`), then ask Solver
+    //whether that partition is fully derivable by elimination alone. Pure function of its
+    //arguments - safe to run concurrently as long as each call gets its own Random, since it
+    //never touches anything outside the Cell grid it builds itself.
+    private static Attempt attempt(int size, FillStrategy fill, Random rand) {
         List<Cell> cells = new ArrayList<>(size * size);
         Cell[][] grid = new Cell[size][size];
         for (int row = 0; row < size; row++) {
@@ -111,17 +138,9 @@ public final class PuzzleGenerator {
             }
         }
 
+        fill.apply(cells, grid, rand);
         Solver solver = new Solver(size, cells);
-        Set<Cell> targets;
-        int iterations = 1;
-        fill.apply(cells, grid, colorCount, rand);
-        targets = solver.solve();
-        while (targets.size() != size) {
-            clearFill(cells);
-            fill.apply(cells, grid, colorCount, rand);
-            targets = solver.solve();
-            iterations++;
-        }
+        Set<Cell> targets = solver.solve();
 
         int[][] colorGrid = new int[size][size];
         boolean[][] targetGrid = new boolean[size][size];
@@ -132,14 +151,92 @@ public final class PuzzleGenerator {
             targetGrid[t.row][t.col] = true;
         }
 
-        double difficultyScore = solver.singletonHits * SINGLETON_WEIGHT
-                + solver.confinementHits * CONFINEMENT_WEIGHT
-                + solver.sharedNeighborHits * SHARED_NEIGHBOR_WEIGHT
-                + solver.lockedSetHits * LOCKED_SET_WEIGHT;
+        return new Attempt(targets.size() == size, colorGrid, targetGrid, solver.singletonHits,
+                solver.confinementHits, solver.sharedNeighborHits, solver.lockedSetHits);
+    }
 
-        return new Result(size, seed, colorCount, colorGrid, targetGrid, iterations,
-                solver.singletonHits, solver.confinementHits, solver.sharedNeighborHits,
-                solver.lockedSetHits, difficultyScore);
+    //Result of one attempt(), before we know yet whether it'll be the one we keep.
+    private record Attempt(boolean solved, int[][] colorGrid, boolean[][] targetGrid,
+                            int singletonHits, int confinementHits, int sharedNeighborHits,
+                            int lockedSetHits) {
+        Result toResult(int size, long seed, int iterations) {
+            double difficultyScore = singletonHits * SINGLETON_WEIGHT
+                    + confinementHits * CONFINEMENT_WEIGHT
+                    + sharedNeighborHits * SHARED_NEIGHBOR_WEIGHT
+                    + lockedSetHits * LOCKED_SET_WEIGHT;
+            return new Result(size, seed,  colorGrid, targetGrid, iterations,
+                    singletonHits, confinementHits, sharedNeighborHits, lockedSetHits, difficultyScore);
+        }
+    }
+
+    //Shared driver: keep asking the given fill strategy for a fresh partition until one is fully
+    //derivable by elimination alone, then package up the result. The two public generate*()
+    //methods differ only in which FillStrategy they pass in here. Single-threaded and consumes
+    //`rand` sequentially across attempts, so a given seed always retries in exactly the same
+    //order - kept exactly as before so existing seeds keep producing the same board.
+    private static Result generateWith(int size, long seed, FillStrategy fill) {
+        Random rand = new Random(seed);
+        int iterations = 1;
+        Attempt a = attempt(size, fill, rand);
+        while (!a.solved()) {
+            a = attempt(size, fill, rand);
+            iterations++;
+        }
+        return a.toResult(size, seed, iterations);
+    }
+
+    //Parallel driver: same reroll-until-solved idea as generateWith, but tries a whole batch of
+    //`batchSize` candidates at once on a thread pool instead of one at a time. To stay a
+    //deterministic function of `seed` despite running concurrently, the *choice* of which
+    //candidate wins never depends on which thread finishes first: sub-seeds for the batch are
+    //drawn from `master` sequentially (so their order only depends on seed, not on timing), and
+    //once the whole batch comes back we always keep the lowest-index solved attempt, waiting for
+    //every future in the batch even if an earlier one already succeeded. Only the batch itself
+    //runs in parallel; the seed -> board mapping this produces is otherwise fixed, just different
+    //from generateWith's (batchSize=1 falls back to it exactly, batchSize>1 does not match it).
+    private static Result generateWithParallel(int size, long seed, FillStrategy fill,
+                                                 int batchSize) {
+        if (batchSize <= 1) {
+            return generateWith(size, seed, fill);
+        }
+
+        Random master = new Random(seed);
+        ExecutorService pool = Executors.newFixedThreadPool(batchSize);
+        try {
+            int iterations = 0;
+            while (true) {
+                List<Future<Attempt>> futures = new ArrayList<>(batchSize);
+                for (int i = 0; i < batchSize; i++) {
+                    long subSeed = master.nextLong();
+                    futures.add(pool.submit(() -> attempt(size, fill, new Random(subSeed))));
+                }
+
+                Attempt winner = null;
+                for (Future<Attempt> future : futures) {
+                    Attempt a = await(future);
+                    iterations++;
+                    if (winner == null && a.solved()) {
+                        winner = a;
+                    }
+                }
+                if (winner != null) {
+                    return winner.toResult(size, seed, iterations);
+                }
+            }
+        } finally {
+            pool.shutdown();
+        }
+    }
+
+    private static Attempt await(Future<Attempt> future) {
+        try {
+            return future.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while generating puzzle", e);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Puzzle generation attempt failed", e.getCause());
+        }
     }
 
     private static List<Cell> getOrthogonalNeighbors(Cell[][] grid, int size, Cell root) {
@@ -167,8 +264,9 @@ public final class PuzzleGenerator {
     // colors start from (random cells here); growLockstep does the actual spreading and is shared
     // with growFromTargets below, whose seeds are chosen very differently. Keeping growth
     // identical between strategies is what makes comparing them meaningful.
-    private static void generateFill(List<Cell> cells, Cell[][] grid, int colorCount, Random rand) {
+    private static void generateFill(List<Cell> cells, Cell[][] grid, Random rand) {
         List<Cell> seeds = new ArrayList<>(cells);
+        int colorCount = grid[0].length; //a replacement for color count since we work with square grids
         Collections.shuffle(seeds, rand);
         seeds = seeds.subList(0, Math.min(colorCount, seeds.size()));
         for (int i = 0; i < seeds.size(); i++) {
@@ -212,7 +310,8 @@ public final class PuzzleGenerator {
     //even attempted, which random seeding can't promise. It does NOT guarantee solve() can derive
     //that solution by elimination alone; growLockstep and the reroll loop in generateWith are
     //otherwise identical to the random strategy.
-    private static void growFromTargets(List<Cell> cells, Cell[][] grid, int colorCount, Random rand) {
+    private static void growFromTargets(List<Cell> cells, Cell[][] grid, Random rand) {
+        int colorCount = grid[0].length;
         List<Integer> targetCols = randomValidPermutation(grid.length, rand);
         List<Integer> colorOrder = new ArrayList<>(colorCount);
         for (int i = 0; i < colorCount; i++) {
@@ -237,8 +336,9 @@ public final class PuzzleGenerator {
     //still seeds at a random cell and grows completely unrestricted via the same growLockstep
     //generateFill uses - only one guaranteed foothold is added, nothing else about the random
     //process changes.
-    private static void growWithAnchor(List<Cell> cells, Cell[][] grid, int colorCount, Random rand) {
+    private static void growWithAnchor(List<Cell> cells, Cell[][] grid, Random rand) {
         boolean anchorIsRow = rand.nextBoolean();
+        int colorCount = grid[0].length;
         int line = rand.nextInt(grid.length);
         int runLength = Math.max(1, Math.min(2, grid.length - 1));
         int start = rand.nextInt(grid.length - runLength + 1);

@@ -12,7 +12,7 @@ public class DifficultySimulator {
 
     @FunctionalInterface
     private interface Strategy {
-        PuzzleGenerator.Result generate(int size, long seed, int colorCount);
+        PuzzleGenerator.Result generate(int size, long seed);
     }
 
     // generateConstructive is deliberately excluded here - see its javadoc in PuzzleGenerator for
@@ -54,7 +54,7 @@ public class DifficultySimulator {
         // how fast they arrive.
         PuzzleGenerator.Result[] results = IntStream.range(0, trials)
                 .parallel()
-                .mapToObj(i -> strategy.generate(size, i, colorCount))
+                .mapToObj(i -> strategy.generate(size, i))
                 .toArray(PuzzleGenerator.Result[]::new);
         long elapsedMs = System.currentTimeMillis() - start;
 
