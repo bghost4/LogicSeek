@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
 
-public class Playfield extends Region {
+public class Level extends Region {
     private final GridPane gp = new GridPane();
     private final Tile[][] tiles;
     private final List<Tile> tileList;
@@ -139,17 +139,17 @@ public class Playfield extends Region {
         this.foundTargets.set(foundTargets.get()+1);
     }
 
-    private final SimpleObjectProperty<Consumer<Playfield>> onLevelComplete = new SimpleObjectProperty<>(l -> {});
-    private final SimpleObjectProperty<Consumer<Playfield>> onLevelFailed = new SimpleObjectProperty<>(l -> {});
+    private final SimpleObjectProperty<Consumer<Level>> onLevelComplete = new SimpleObjectProperty<>(l -> {});
+    private final SimpleObjectProperty<Consumer<Level>> onLevelFailed = new SimpleObjectProperty<>(l -> {});
 
-    public ObjectProperty<Consumer<Playfield>> onLevelCompleteProperty() { return onLevelComplete; }
-    public ObjectProperty<Consumer<Playfield>> onLevelFailedProperty() { return onLevelFailed; }
+    public ObjectProperty<Consumer<Level>> onLevelCompleteProperty() { return onLevelComplete; }
+    public ObjectProperty<Consumer<Level>> onLevelFailedProperty() { return onLevelFailed; }
 
-    public Playfield(long seed) {
+    public Level(long seed) {
         this(sizeForSeed(seed), seed);
     }
 
-    public Playfield(int size, long seed) {
+    public Level(int size, long seed) {
         this.size = size;
         this.seed = seed;
         this.rand = new Random(seed);

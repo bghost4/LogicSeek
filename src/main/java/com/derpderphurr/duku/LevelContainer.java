@@ -9,7 +9,7 @@ import java.util.Objects;
 
 public class LevelContainer extends Region {
 
-    private final SimpleObjectProperty<Playfield> playfield = new SimpleObjectProperty<>();
+    private final SimpleObjectProperty<Level> playfield = new SimpleObjectProperty<>();
     private final Label lblLevelSeed = new Label();
     private final Label lblDifficulty = new Label();
     private final Label lblTargetStats = new Label();
@@ -78,17 +78,17 @@ public class LevelContainer extends Region {
                 lblTargetStats.textProperty().bind(Bindings.format("Targets: %d/%d",nv.foundTargetsProperty(),nv.getSizeProperty()));
                 lblMisses.textProperty().bind(Bindings.format("Misses: %d/%d",nv.missesProperty(),3));
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
-                nv.onLevelFailedProperty().set(Playfield::reset);
+                nv.onLevelFailedProperty().set(Level::reset);
                 nv.onLevelCompleteProperty().set(p -> {
                     ScoreHistory.recordCompletion(p.getSeed(), p.getSizeProperty().get(), p.scoreProperty().get(), p.getElapsedMillis());
-                    this.setLevel(new Playfield(p.getSeed() + 1));
+                    this.setLevel(new Level(p.getSeed() + 1));
                 });
             }
         } );
     }
 
 
-    public void setLevel(Playfield p) {
+    public void setLevel(Level p) {
         GamePrefs.saveLastSeed(p.getSeed());
         this.playfield.set(p);
     }

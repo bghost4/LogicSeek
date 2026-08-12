@@ -20,7 +20,7 @@ public class Main extends Application {
         vb.getChildren().add(lc);
 
         long seed = GamePrefs.getLastSeed(1);
-        Playfield p = new Playfield(seed);
+        Level p = new Level(seed);
         lc.setLevel(p);
 
         primaryStage.setScene(new Scene(vb));
