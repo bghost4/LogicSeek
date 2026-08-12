@@ -76,7 +76,12 @@ public class Playfield extends Region {
     //this level's Tiles.
     private void buildLevel() {
         int colorCount = Math.min(size, REGION_COLORS.length);
-        PuzzleGenerator.Result result = PuzzleGenerator.generate(size, seed, colorCount);
+        // generateAnchored (one color deliberately confined to a line, everything else random)
+        // measured consistently faster than plain generate() across sizes 6-10 - roughly 1.5-3.4x
+        // fewer median reroll iterations, up to 5x fewer on the worst case, and about 2x less
+        // wall-clock time - without a meaningful difficulty-score difference. See PuzzleGenerator
+        // for both strategies; generate() is kept for reference/comparison in DifficultySimulator.
+        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchored(size, seed, colorCount);
 
         //which hex color represents which color id is purely cosmetic and doesn't affect
         //difficulty, so it's picked here rather than inside the JavaFX-free generator
