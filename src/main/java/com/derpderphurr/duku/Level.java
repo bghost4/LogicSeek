@@ -70,6 +70,18 @@ public class Level extends Region {
             Color.web("#9a6324"), // brown
     };
 
+    //This level's shuffled slice of REGION_COLORS, indexed by Cell.colorGroup - the default
+    //"stylesheet". Kept as a field (not a buildLevel local) since Tile reads it back through
+    //colorFor() while it's being constructed. A future customizable stylesheet would replace how
+    //this list is built, not how Tile or Cell work with it.
+    private List<Color> colors;
+
+    //Resolves a Cell's colorGroup to the actual paint Color for this level - the seam a future
+    //user-customizable stylesheet would hook into instead of the REGION_COLORS shuffle below.
+    public Color colorFor(int colorGroup) {
+        return colors.get(colorGroup);
+    }
+
     public void reset() {
         tileList.forEach(Tile::reset);
         foundTargets.set(0);
@@ -82,10 +94,10 @@ public class Level extends Region {
     }
 
     //Generation/solving itself lives in PuzzleGenerator (no JavaFX dependency, so it can also run
-    //headless in DifficultySimulator) - this just asks it for a board and paints the result onto
-    //this level's Tiles.
+    //headless in DifficultySimulator) - this asks it for a board, then builds this level's Tiles
+    //directly from the generated Cells (each Tile is a view/controller over its own Cell - see
+    //Tile.getRow/getCol/colorFor).
     private void buildLevel() {
-        //int colorCount = Math.min(size, REGION_COLORS.length);
         // generateAnchored (one color deliberately confined to a line, everything else random)
         // measured consistently faster than plain generate() across sizes 6-10 - roughly 1.5-3.4x
         // fewer median reroll iterations, up to 5x fewer on the worst case, and about 2x less
@@ -96,17 +108,24 @@ public class Level extends Region {
         // seed->board mapping as the single-threaded generateAnchored.
         PuzzleGenerator.Result result = PuzzleGenerator.generateAnchoredParallel(size, seed);
 
-        //which hex color represents which color id is purely cosmetic and doesn't affect
-        //difficulty, so it's picked here rather than inside the JavaFX-free generator
+        //which hex color represents which color group is purely cosmetic and doesn't affect
+        //difficulty, so it's picked here rather than inside the JavaFX-free generator. Stored as a
+        //field (not a local) so Tile can look it up via colorFor() while it's being constructed.
         List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
         Collections.shuffle(palette, rand);
-        List<Color> colors = palette.subList(0, size);
+        colors = palette.subList(0, size);
 
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                Tile t = tiles[col][row];
-                t.setColor(colors.get(result.colorGrid()[row][col]));
+                Cell cell = result.cells()[row][col];
+                Tile t = new Tile(this, cell);
                 if (result.targetGrid()[row][col]) { t.setTarget(true); }
+
+                tiles[col][row] = t;
+                GridPane.setVgrow(t, Priority.ALWAYS);
+                GridPane.setHgrow(t, Priority.ALWAYS);
+                gp.add(t, col, row);
+                tileList.add(t);
             }
         }
 
@@ -174,17 +193,6 @@ public class Level extends Region {
         this.prefHeightProperty().bind(this.widthProperty());
 
         tiles = new Tile[size][size];
-
-        for(int x=0; x < size; x++ ){
-            for(int y=0; y < size; y++) {
-                Tile t  = new Tile(this,x,y);
-                tiles[x][y] = t;
-                GridPane.setVgrow(t, Priority.ALWAYS);
-                GridPane.setHgrow(t,Priority.ALWAYS);
-                gp.add(t,x,y);
-                tileList.add(t);
-            }
-        }
 
         buildLevel();
         this.levelTimer = System.currentTimeMillis();

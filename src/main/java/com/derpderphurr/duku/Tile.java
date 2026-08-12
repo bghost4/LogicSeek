@@ -37,20 +37,22 @@ public class Tile extends Region {
     private final SimpleBooleanProperty crossed = new SimpleBooleanProperty(false); // when a user marks as not a target
     private final SimpleBooleanProperty found = new SimpleBooleanProperty(false);
 
-    //where the cell lives on the grid
-    private final int row,col;
+    //Tile is a view/controller over its Cell: position and color group are the generator's output,
+    //Tile just reads them and asks its Level to resolve colorGroup to an actual paint Color (see
+    //Level.colorFor) - that indirection is what will let a future customizable stylesheet swap in
+    //without Tile or Cell needing to change at all.
+    private final Cell cell;
 
     public int getRow() {
-        return row;
+        return cell.row;
     }
 
     public int getCol() {
-        return col;
+        return cell.col;
     }
 
-    public Tile(Level l, int x, int y) {
-        this.row = y;
-        this.col = x;
+    public Tile(Level l, Cell cell) {
+        this.cell = cell;
         this.level = l;
 
         rect.widthProperty().bindBidirectional(rect.heightProperty()); //lock in square
@@ -120,7 +122,7 @@ public class Tile extends Region {
         targetMark.visibleProperty().bind(found);
 
         this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
-        setColor(color);
+        setColor(level.colorFor(cell.colorGroup));
     }
 
     public int distance(int a,int b) {

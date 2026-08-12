@@ -6,7 +6,10 @@ final class Cell {
     static final int UNCLAIMED = -1;
 
     final int row, col;
-    int colorId = UNCLAIMED;
+    //Which region this cell was assigned to during generation - a plain index, not a rendered
+    //color. Tile resolves it to an actual Color via its Level's palette (see Level.colorFor), so
+    //swapping the palette (e.g. a future user-customizable stylesheet) never has to touch Cell.
+    int colorGroup = UNCLAIMED;
 
     Cell(int row, int col) {
         this.row = row;

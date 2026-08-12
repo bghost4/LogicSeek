@@ -28,7 +28,7 @@ public final class PuzzleGenerator {
     private PuzzleGenerator() {}
 
     public record Result(int size, long seed,
-                          int[][] colorGrid, boolean[][] targetGrid,
+                          Cell[][] cells, boolean[][] targetGrid,
                           int iterations, int singletonHits, int confinementHits,
                           int sharedNeighborHits, int lockedSetHits, double difficultyScore) {}
 
@@ -44,7 +44,7 @@ public final class PuzzleGenerator {
     private static final double LOCKED_SET_WEIGHT = 6.0;
 
     //Any seed-selection strategy that can be dropped into generateWith - it just needs to leave
-    //`cells` partitioned by colorId (UNCLAIMED is not allowed to survive) when it returns.
+    //`cells` partitioned by colorGroup (UNCLAIMED is not allowed to survive) when it returns.
     @FunctionalInterface
     private interface FillStrategy {
         void apply(List<Cell> cells, Cell[][] grid, Random rand);
@@ -120,21 +120,17 @@ public final class PuzzleGenerator {
         Solver solver = new Solver(size, cells);
         Set<Cell> targets = solver.solve();
 
-        int[][] colorGrid = new int[size][size];
         boolean[][] targetGrid = new boolean[size][size];
-        for (Cell c : cells) {
-            colorGrid[c.row][c.col] = c.colorId;
-        }
         for (Cell t : targets) {
             targetGrid[t.row][t.col] = true;
         }
 
-        return new Attempt(targets.size() == size, colorGrid, targetGrid, solver.singletonHits,
+        return new Attempt(targets.size() == size, grid, targetGrid, solver.singletonHits,
                 solver.confinementHits, solver.sharedNeighborHits, solver.lockedSetHits);
     }
 
     //Result of one attempt(), before we know yet whether it'll be the one we keep.
-    private record Attempt(boolean solved, int[][] colorGrid, boolean[][] targetGrid,
+    private record Attempt(boolean solved, Cell[][] cells, boolean[][] targetGrid,
                             int singletonHits, int confinementHits, int sharedNeighborHits,
                             int lockedSetHits) {
         Result toResult(int size, long seed, int iterations) {
@@ -142,7 +138,7 @@ public final class PuzzleGenerator {
                     + confinementHits * CONFINEMENT_WEIGHT
                     + sharedNeighborHits * SHARED_NEIGHBOR_WEIGHT
                     + lockedSetHits * LOCKED_SET_WEIGHT;
-            return new Result(size, seed, colorGrid, targetGrid, iterations,
+            return new Result(size, seed, cells, targetGrid, iterations,
                     singletonHits, confinementHits, sharedNeighborHits, lockedSetHits, difficultyScore);
         }
     }
@@ -248,7 +244,7 @@ public final class PuzzleGenerator {
         Collections.shuffle(seeds, rand);
         seeds = seeds.subList(0, Math.min(colorCount, seeds.size()));
         for (int i = 0; i < seeds.size(); i++) {
-            seeds.get(i).colorId = i;
+            seeds.get(i).colorGroup = i;
         }
         growLockstep(seeds, grid, rand);
     }
@@ -300,7 +296,7 @@ public final class PuzzleGenerator {
         List<Cell> seeds = new ArrayList<>(colorCount);
         for (int row = 0; row < colorCount; row++) {
             Cell seed = grid[row][targetCols.get(row)];
-            seed.colorId = colorOrder.get(row);
+            seed.colorGroup = colorOrder.get(row);
             seeds.add(seed);
         }
         growLockstep(seeds, grid, rand);
@@ -325,7 +321,7 @@ public final class PuzzleGenerator {
         List<Cell> anchorCells = new ArrayList<>(runLength);
         for (int i = 0; i < runLength; i++) {
             Cell c = anchorIsRow ? grid[line][start + i] : grid[start + i][line];
-            c.colorId = anchorColor;
+            c.colorGroup = anchorColor;
             anchorCells.add(c);
         }
 
@@ -338,7 +334,7 @@ public final class PuzzleGenerator {
         for (Cell seed : pool) {
             if (nextColor == anchorColor) { nextColor++; }
             if (nextColor >= colorCount || seeds.size() == colorCount - 1) { break; }
-            seed.colorId = nextColor;
+            seed.colorGroup = nextColor;
             seeds.add(seed);
             nextColor++;
         }
@@ -352,9 +348,9 @@ public final class PuzzleGenerator {
     private static void growLockstep(List<Cell> seeds, Cell[][] grid, Random rand) {
         int size = grid.length;
         List<Deque<Cell>> frontiers = new ArrayList<>(seeds.size());
-        List<Integer> colorIds = new ArrayList<>(seeds.size());
+        List<Integer> colorGroups = new ArrayList<>(seeds.size());
         for (Cell seed : seeds) {
-            colorIds.add(seed.colorId);
+            colorGroups.add(seed.colorGroup);
             List<Cell> neighbors = getOrthogonalNeighbors(grid, size, seed);
             Collections.shuffle(neighbors, rand);
             frontiers.add(new ArrayDeque<>(neighbors));
@@ -365,7 +361,7 @@ public final class PuzzleGenerator {
             grew = false;
             for (int i = 0; i < frontiers.size(); i++) {
                 Deque<Cell> frontier = frontiers.get(i);
-                int colorId = colorIds.get(i);
+                int colorGroup = colorGroups.get(i);
 
                 //pop candidates until we find one still unclaimed - a cell can sit in more than
                 //one region's frontier if it borders two colors, so whichever region gets there
@@ -373,14 +369,14 @@ public final class PuzzleGenerator {
                 Cell next = null;
                 while (!frontier.isEmpty()) {
                     Cell candidate = frontier.remove();
-                    if (candidate.colorId == Cell.UNCLAIMED) {
+                    if (candidate.colorGroup == Cell.UNCLAIMED) {
                         next = candidate;
                         break;
                     }
                 }
 
                 if (next != null) {
-                    next.colorId = colorId;
+                    next.colorGroup = colorGroup;
                     List<Cell> neighbors = getOrthogonalNeighbors(grid, size, next);
                     Collections.shuffle(neighbors, rand);
                     frontier.addAll(neighbors);

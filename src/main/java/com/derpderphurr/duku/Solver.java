@@ -28,7 +28,7 @@ final class Solver {
     private boolean sharesConstraint(Cell a, Cell b) {
         return a.row == b.row
                 || a.col == b.col
-                || a.colorId == b.colorId
+                || a.colorGroup == b.colorGroup
                 || a.isNeighbor(b);
     }
 
@@ -55,9 +55,9 @@ final class Solver {
         boolean confinedToLine = group.stream().mapToInt(lineOf).allMatch(l -> l == line);
         if (!confinedToLine) { return false; }
 
-        int colorId = group.get(0).colorId;
+        int colorGroup = group.get(0).colorGroup;
         List<Cell> eliminated = candidates.stream()
-                .filter(t -> lineOf.applyAsInt(t) == line && t.colorId != colorId)
+                .filter(t -> lineOf.applyAsInt(t) == line && t.colorGroup != colorGroup)
                 .toList();
         if (eliminated.isEmpty()) { return false; }
 
@@ -87,7 +87,7 @@ final class Solver {
 
                 Set<Integer> subsetColors = new HashSet<>(subset);
                 List<Cell> eliminated = candidates.stream()
-                        .filter(t -> lines.contains(lineOf.applyAsInt(t)) && !subsetColors.contains(t.colorId))
+                        .filter(t -> lines.contains(lineOf.applyAsInt(t)) && !subsetColors.contains(t.colorGroup))
                         .toList();
                 if (eliminated.isEmpty()) { continue; }
 
@@ -146,7 +146,7 @@ final class Solver {
                 if (trySharedNeighbor(candidates.stream().filter(t -> t.col == fi).toList(), candidates)) { sharedNeighborHits++; progress = true; }
             }
 
-            Map<Integer, List<Cell>> byColor = candidates.stream().collect(Collectors.groupingBy(c -> c.colorId));
+            Map<Integer, List<Cell>> byColor = candidates.stream().collect(Collectors.groupingBy(c -> c.colorGroup));
             for (List<Cell> group : byColor.values()) {
                 if (trySingleton(group, candidates, solved)) { singletonHits++; progress = true; }
                 if (trySharedNeighbor(group, candidates)) { sharedNeighborHits++; progress = true; }
