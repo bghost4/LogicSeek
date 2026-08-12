@@ -33,6 +33,16 @@ public class Playfield extends Region {
     private static final double MIN_WINDOW_FRACTION = 0.3;
     private static final double MAX_MULTIPLIER = 2.5;
 
+    //Board size is derived from the seed rather than stored separately, so a seed alone is enough
+    //to reproduce a level - only MIN_SIZE..MAX_SIZE are actually used, so the game only ever needs
+    //to persist one number (see GamePrefs.getLastSeed / sizeForSeed below).
+    public static final int MIN_SIZE = 6;
+    public static final int MAX_SIZE = 10;
+
+    public static int sizeForSeed(long seed) {
+        return MIN_SIZE + new Random(seed).nextInt(MAX_SIZE - MIN_SIZE + 1);
+    }
+
     // Derived once per level from size: the window shrinks each find so the last target of the
     // level always gets MIN_WINDOW_FRACTION of the first target's window, and a flawless run
     // always tops out at exactly MAX_MULTIPLIER by the final target, regardless of level size.
@@ -131,6 +141,10 @@ public class Playfield extends Region {
 
     public ObjectProperty<Consumer<Playfield>> onLevelCompleteProperty() { return onLevelComplete; }
     public ObjectProperty<Consumer<Playfield>> onLevelFailedProperty() { return onLevelFailed; }
+
+    public Playfield(long seed) {
+        this(sizeForSeed(seed), seed);
+    }
 
     public Playfield(int size, long seed) {
         this.size = size;

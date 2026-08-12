@@ -79,14 +79,14 @@ public class LevelContainer extends Region {
                 lblMisses.textProperty().bind(Bindings.format("Misses: %d/%d",nv.missesProperty(),3));
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
                 nv.onLevelFailedProperty().set(Playfield::reset);
-                nv.onLevelCompleteProperty().set(p -> this.setLevel(new Playfield(8,p.getSeed()+1)));
+                nv.onLevelCompleteProperty().set(p -> this.setLevel(new Playfield(p.getSeed()+1)));
             }
         } );
     }
 
 
     public void setLevel(Playfield p) {
-        GamePrefs.saveLastLevel(p.getSeed(), p.getSizeProperty().get());
+        GamePrefs.saveLastSeed(p.getSeed());
         this.playfield.set(p);
     }
 }
