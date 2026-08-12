@@ -85,7 +85,7 @@ public class Level extends Region {
     //headless in DifficultySimulator) - this just asks it for a board and paints the result onto
     //this level's Tiles.
     private void buildLevel() {
-        int colorCount = Math.min(size, REGION_COLORS.length);
+        //int colorCount = Math.min(size, REGION_COLORS.length);
         // generateAnchored (one color deliberately confined to a line, everything else random)
         // measured consistently faster than plain generate() across sizes 6-10 - roughly 1.5-3.4x
         // fewer median reroll iterations, up to 5x fewer on the worst case, and about 2x less
@@ -94,13 +94,13 @@ public class Level extends Region {
         // The *Parallel variant races several reroll attempts per round on a thread pool, which
         // still picks deterministically off `seed` (see generateWithParallel) but is not the same
         // seed->board mapping as the single-threaded generateAnchored.
-        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchoredParallel(size, seed, colorCount);
+        PuzzleGenerator.Result result = PuzzleGenerator.generateAnchoredParallel(size, seed);
 
         //which hex color represents which color id is purely cosmetic and doesn't affect
         //difficulty, so it's picked here rather than inside the JavaFX-free generator
         List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
         Collections.shuffle(palette, rand);
-        List<Color> colors = palette.subList(0, colorCount);
+        List<Color> colors = palette.subList(0, size);
 
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
