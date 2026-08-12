@@ -159,6 +159,9 @@ final class Solver {
             if (tryLockedSets(byColor, candidates, c -> c.col)) { lockedSetHits++; progress = true; }
         }
 
+        for (Cell c : solved) {
+            c.target = true;
+        }
         return solved;
     }
 

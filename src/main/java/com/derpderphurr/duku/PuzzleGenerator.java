@@ -28,7 +28,7 @@ public final class PuzzleGenerator {
     private PuzzleGenerator() {}
 
     public record Result(int size, long seed,
-                          Cell[][] cells, boolean[][] targetGrid,
+                          Cell[][] cells,
                           int iterations, int singletonHits, int confinementHits,
                           int sharedNeighborHits, int lockedSetHits, double difficultyScore) {}
 
@@ -120,17 +120,12 @@ public final class PuzzleGenerator {
         Solver solver = new Solver(size, cells);
         Set<Cell> targets = solver.solve();
 
-        boolean[][] targetGrid = new boolean[size][size];
-        for (Cell t : targets) {
-            targetGrid[t.row][t.col] = true;
-        }
-
-        return new Attempt(targets.size() == size, grid, targetGrid, solver.singletonHits,
+        return new Attempt(targets.size() == size, grid, solver.singletonHits,
                 solver.confinementHits, solver.sharedNeighborHits, solver.lockedSetHits);
     }
 
     //Result of one attempt(), before we know yet whether it'll be the one we keep.
-    private record Attempt(boolean solved, Cell[][] cells, boolean[][] targetGrid,
+    private record Attempt(boolean solved, Cell[][] cells,
                             int singletonHits, int confinementHits, int sharedNeighborHits,
                             int lockedSetHits) {
         Result toResult(int size, long seed, int iterations) {
@@ -138,7 +133,7 @@ public final class PuzzleGenerator {
                     + confinementHits * CONFINEMENT_WEIGHT
                     + sharedNeighborHits * SHARED_NEIGHBOR_WEIGHT
                     + lockedSetHits * LOCKED_SET_WEIGHT;
-            return new Result(size, seed, cells, targetGrid, iterations,
+            return new Result(size, seed, cells, iterations,
                     singletonHits, confinementHits, sharedNeighborHits, lockedSetHits, difficultyScore);
         }
     }

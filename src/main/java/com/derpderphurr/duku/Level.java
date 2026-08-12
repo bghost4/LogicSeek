@@ -119,7 +119,6 @@ public class Level extends Region {
             for (int col = 0; col < size; col++) {
                 Cell cell = result.cells()[row][col];
                 Tile t = new Tile(this, cell);
-                if (result.targetGrid()[row][col]) { t.setTarget(true); }
 
                 tiles[col][row] = t;
                 GridPane.setVgrow(t, Priority.ALWAYS);

@@ -123,6 +123,7 @@ public class Tile extends Region {
 
         this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
         setColor(level.colorFor(cell.colorGroup));
+        setTarget(cell.target);
     }
 
     public int distance(int a,int b) {
