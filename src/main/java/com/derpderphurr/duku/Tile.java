@@ -13,7 +13,6 @@ import javafx.scene.shape.Rectangle;
 public class Tile extends Region {
 
     //Visual Elements
-    public static final Color DEFAULT_COLOR = Color.LIGHTGRAY;
     private final Rectangle rect = new Rectangle();
     //overlay marks drawn on top of rect, so the tile's region color always stays visible underneath
     private final Line crossLineA = new Line();
@@ -25,7 +24,6 @@ public class Tile extends Region {
     private final Group crossMark = new Group(crossOutlineA, crossOutlineB, crossLineA, crossLineB);
     private final Circle targetOutline = new Circle();
     private final Circle targetMark = new Circle();
-    private Color color = DEFAULT_COLOR;
 
     private final Level level;
 
@@ -122,8 +120,7 @@ public class Tile extends Region {
         targetMark.visibleProperty().bind(found);
 
         this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
-        setColor(level.colorFor(cell.colorGroup));
-        setTarget(cell.target);
+        rect.setFill(level.colorFor(cell.colorGroup));
     }
 
     public int distance(int a,int b) {
@@ -169,21 +166,8 @@ public class Tile extends Region {
         }
     }
 
-    public Color getColor() {
-        return color;
-    }
-
-    public void setColor(Color color) {
-        this.color = color;
-        this.rect.setFill(color);
-    }
-
     public boolean isTarget() {
-        return target;
-    }
-
-    public void setTarget(boolean target) {
-        this.target = target;
+        return cell.target;
     }
 
     public void reset() {
