@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -92,12 +93,23 @@ public final class PuzzleGenerator {
     //otherwise the same seed would generate a different level on a different core count.
     private static final int DEFAULT_PARALLELISM = 4;
 
+    //How many reroll attempts (summed across parallel batches) to spend on one seed before giving
+    //up on it and returning empty, rather than retrying forever. Bounds worst-case generation
+    //latency for the rare pathological seed. Callers that need a board regardless should retry
+    //with a different seed on an empty result (see LevelContainer.generateLevel) -
+    //PuzzleGenerator deliberately doesn't pick the next seed itself, since "what seed comes next"
+    //is a caller policy (e.g. it needs Level.sizeForSeed re-run on the new seed), not a generation
+    //concern. Set well above the iteration counts observed in practice (see DifficultySimulator)
+    //so ordinary seeds are never affected - a reasonable starting point, tune from here.
+    private static final int MAX_ITERATIONS_PER_SEED = 20_000;
+
     //Parallel twin of generateAnchored: races `parallelism` reroll attempts per round on a thread
     //pool instead of trying them one at a time. See generateWithParallel for how it stays
     //deterministic (same seed -> same board) despite the concurrency. `parallelism` is part of
     //that seed->board mapping, so callers who need reproducible boards must pass the same value
     //every time (the no-arg overload below always uses DEFAULT_PARALLELISM for this reason).
-    public static Result generateAnchoredParallel(int size, long seed) {
+    //Empty if `seed` hits MAX_ITERATIONS_PER_SEED without a solved attempt.
+    public static Optional<Result> generateAnchoredParallel(int size, long seed) {
         return generateWithParallel(size, seed, PuzzleGenerator::growWithAnchor);
     }
 
@@ -155,24 +167,25 @@ public final class PuzzleGenerator {
     }
 
     //Parallel driver: same reroll-until-solved idea as generateWith, but tries a whole batch of
-    //`batchSize` candidates at once on a thread pool instead of one at a time. To stay a
+    //`batchSize` candidates at once on a thread pool instead of one at a time, and gives up once
+    //MAX_ITERATIONS_PER_SEED attempts have been spent on `seed` without success. To stay a
     //deterministic function of `seed` despite running concurrently, the *choice* of which
     //candidate wins never depends on which thread finishes first: sub-seeds for the batch are
     //drawn from `master` sequentially (so their order only depends on seed, not on timing), and
     //once the whole batch comes back we always keep the lowest-index solved attempt, waiting for
     //every future in the batch even if an earlier one already succeeded. Only the batch itself
     //runs in parallel; the seed -> board mapping this produces is otherwise fixed, just different
-    //from generateWith's (batchSize=1 falls back to it exactly, batchSize>1 does not match it).
-    private static Result generateWithParallel(int size, long seed, FillStrategy fill) {
+    //from generateWith's (batchSize=1 falls back to the same reroll order, just bounded).
+    private static Optional<Result> generateWithParallel(int size, long seed, FillStrategy fill) {
         if (PuzzleGenerator.DEFAULT_PARALLELISM <= 1) {
-            return generateWith(size, seed, fill);
+            return generateWithBounded(size, seed, fill, MAX_ITERATIONS_PER_SEED);
         }
 
         Random master = new Random(seed);
         ExecutorService pool = Executors.newFixedThreadPool(PuzzleGenerator.DEFAULT_PARALLELISM);
         try {
             int iterations = 0;
-            while (true) {
+            while (iterations < MAX_ITERATIONS_PER_SEED) {
                 List<Future<Attempt>> futures = new ArrayList<>(PuzzleGenerator.DEFAULT_PARALLELISM);
                 for (int i = 0; i < PuzzleGenerator.DEFAULT_PARALLELISM; i++) {
                     long subSeed = master.nextLong();
@@ -188,12 +201,29 @@ public final class PuzzleGenerator {
                     }
                 }
                 if (winner != null) {
-                    return winner.toResult(size, seed, iterations);
+                    return Optional.of(winner.toResult(size, seed, iterations));
                 }
             }
+            return Optional.empty();
         } finally {
             pool.shutdown();
         }
+    }
+
+    //Bounded sequential fallback for generateWithParallel when DEFAULT_PARALLELISM<=1 - same
+    //reroll loop as generateWith, just capped instead of unconditional.
+    private static Optional<Result> generateWithBounded(int size, long seed, FillStrategy fill, int maxIterations) {
+        Random rand = new Random(seed);
+        int iterations = 1;
+        Attempt a = attempt(size, fill, rand);
+        while (!a.solved()) {
+            if (iterations >= maxIterations) {
+                return Optional.empty();
+            }
+            a = attempt(size, fill, rand);
+            iterations++;
+        }
+        return Optional.of(a.toResult(size, seed, iterations));
     }
 
     private static Attempt await(Future<Attempt> future) {

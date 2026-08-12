@@ -10,6 +10,7 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.*;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class LevelContainer extends Region {
 
@@ -112,14 +113,26 @@ public class LevelContainer extends Region {
     //Task instead of blocking the FX thread. Task's state-change handlers (setOnSucceeded here)
     //are dispatched back onto the FX thread automatically, so building the Level and swapping it
     //in via setLevel is still safe to do directly in the callback.
+    //
+    //generateAnchoredParallel gives up on a seed after MAX_ITERATIONS_PER_SEED attempts (see
+    //PuzzleGenerator) rather than retrying it forever, returning empty - when that happens this
+    //just moves on to the next seed and tries again, recomputing size for it via
+    //Level.sizeForSeed each time (a seed and its size always have to be derived together, or the
+    //"seed alone reproduces the level" guarantee breaks for whichever seed actually gets used).
     public void generateLevel(long seed) {
         playfieldStackPane.getChildren().add(loadingPane);
 
         Task<PuzzleGenerator.Result> task = new Task<>() {
             @Override
             protected PuzzleGenerator.Result call() {
-                int size = Level.sizeForSeed(seed);
-                return PuzzleGenerator.generateAnchoredParallel(size, seed);
+                long trySeed = seed;
+                Optional<PuzzleGenerator.Result> result;
+                do {
+                    int size = Level.sizeForSeed(trySeed);
+                    result = PuzzleGenerator.generateAnchoredParallel(size, trySeed);
+                    trySeed++;
+                } while (result.isEmpty());
+                return result.get();
             }
         };
         task.setOnSucceeded(e -> {
