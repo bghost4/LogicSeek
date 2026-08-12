@@ -25,16 +25,12 @@ public class GamePrefs {
     public static double getWindowWidth(double defaultValue) { return prefs.getDouble(KEY_WINDOW_WIDTH, defaultValue); }
     public static double getWindowHeight(double defaultValue) { return prefs.getDouble(KEY_WINDOW_HEIGHT, defaultValue); }
 
-    //Board size is no longer stored - Playfield.sizeForSeed derives it from the seed itself, so
-    //the seed alone is enough to reproduce a level.
     public static void saveLastSeed(long seed) {
         prefs.putLong(KEY_LAST_SEED, seed);
     }
 
     public static long getLastSeed(long defaultValue) { return prefs.getLong(KEY_LAST_SEED, defaultValue); }
 
-    //Clears just the saved seed, leaving window bounds alone, so the next launch starts a brand
-    //new level (via Main's getLastSeed default) instead of resuming where the last session left off.
     public static void resetLevel() {
         prefs.remove(KEY_LAST_SEED);
     }
