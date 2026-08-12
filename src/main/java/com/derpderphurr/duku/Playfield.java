@@ -196,6 +196,10 @@ public class Playfield extends Region {
         return seed;
     }
 
+    public long getElapsedMillis() {
+        return System.currentTimeMillis() - levelTimer;
+    }
+
     public ReadOnlyIntegerProperty getSizeProperty() {
         return sizeProp;
     }
