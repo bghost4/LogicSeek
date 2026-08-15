@@ -12,7 +12,6 @@ public class GamePrefs {
     private static final String KEY_WINDOW_WIDTH = "windowWidth";
     private static final String KEY_WINDOW_HEIGHT = "windowHeight";
     private static final String KEY_LAST_SEED = "lastSeed";
-    private static final String KEY_LAST_SIZE = "lastSize";
 
     public static void saveWindowBounds(double x, double y, double width, double height) {
         prefs.putDouble(KEY_WINDOW_X, x);
@@ -26,11 +25,13 @@ public class GamePrefs {
     public static double getWindowWidth(double defaultValue) { return prefs.getDouble(KEY_WINDOW_WIDTH, defaultValue); }
     public static double getWindowHeight(double defaultValue) { return prefs.getDouble(KEY_WINDOW_HEIGHT, defaultValue); }
 
-    public static void saveLastLevel(long seed, int size) {
+    public static void saveLastSeed(long seed) {
         prefs.putLong(KEY_LAST_SEED, seed);
-        prefs.putInt(KEY_LAST_SIZE, size);
     }
 
     public static long getLastSeed(long defaultValue) { return prefs.getLong(KEY_LAST_SEED, defaultValue); }
-    public static int getLastSize(int defaultValue) { return prefs.getInt(KEY_LAST_SIZE, defaultValue); }
+
+    public static void resetLevel() {
+        prefs.remove(KEY_LAST_SEED);
+    }
 }
