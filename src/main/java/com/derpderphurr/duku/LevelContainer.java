@@ -9,6 +9,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.*;
 
+import java.io.IOException;
 import java.util.Objects;
 
 public class LevelContainer extends Region {
@@ -94,7 +95,11 @@ public class LevelContainer extends Region {
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
                 nv.onLevelFailedProperty().set(Level::reset);
                 nv.onLevelCompleteProperty().set(p -> {
-                    ScoreHistory.recordCompletion(p.getSeed(), p.getSizeProperty().get(), p.scoreProperty().get(), p.getElapsedMillis());
+                    try {
+                        ScoreHistory.recordCompletion(p.getSeed(), p.getSizeProperty().get(), p.scoreProperty().get(), p.getElapsedMillis(),p.getDifficultyScore());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                     this.generateLevel(p.getSeed() + 1);
                 });
             }
