@@ -1,7 +1,11 @@
 package com.derpderphurr.duku;
 
 import javafx.application.Application;
+import javafx.event.ActionEvent;
 import javafx.scene.Scene;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -14,10 +18,26 @@ public class Main extends Application {
 
     private final LevelContainer lc = new LevelContainer();
 
+    private void showHighScore(ActionEvent e) {
+
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
-        vb.getChildren().add(lc);
+
+        MenuBar mb = new MenuBar();
+
+        Menu mOptions = new Menu("Options");
+            MenuItem miScore = new MenuItem("Score");
+                miScore.setOnAction(this::showHighScore);
+            MenuItem miResetProgress = new MenuItem("Reset Game Progress");
+                miResetProgress.setOnAction( e -> GamePrefs.resetLevel() );
+            MenuItem miAbout = new MenuItem("About");
+
+        mOptions.getItems().addAll(miResetProgress,miAbout);
+        mb.getMenus().add(mOptions);
+        vb.getChildren().addAll(mb,lc);
 
         long seed = GamePrefs.getLastSeed(1);
         lc.generateLevel(seed);
