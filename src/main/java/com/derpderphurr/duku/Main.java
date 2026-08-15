@@ -9,6 +9,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import javax.swing.*;
+import java.io.IOException;
+
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main extends Application {
@@ -22,6 +25,14 @@ public class Main extends Application {
 
     }
 
+    private void resetHighScore(ActionEvent e) {
+        try {
+            ScoreHistory.stash();
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         VBox vb = new VBox();
@@ -31,11 +42,17 @@ public class Main extends Application {
         Menu mOptions = new Menu("Options");
             MenuItem miScore = new MenuItem("Score");
                 miScore.setOnAction(this::showHighScore);
-            MenuItem miResetProgress = new MenuItem("Reset Game Progress");
-                miResetProgress.setOnAction( e -> GamePrefs.resetLevel() );
+
             MenuItem miAbout = new MenuItem("About");
 
-        mOptions.getItems().addAll(miResetProgress,miAbout);
+        Menu mReset = new Menu("Reset");
+        MenuItem miResetProgress = new MenuItem("Reset Game Progress");
+        miResetProgress.setOnAction( e -> GamePrefs.resetLevel() );
+        MenuItem miResetScore = new MenuItem("Reset High Score");
+        miResetScore.setOnAction(this::resetHighScore);
+
+        mOptions.getItems().addAll(miScore,miAbout);
+        mReset.getItems().addAll(miResetProgress,miResetScore);
         mb.getMenus().add(mOptions);
         vb.getChildren().addAll(mb,lc);
 

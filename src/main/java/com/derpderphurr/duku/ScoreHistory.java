@@ -21,6 +21,14 @@ public final class ScoreHistory {
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     private static final String HEADER = "dateTimeIso,seed,size,score,completionTimeMillis";
 
+    /**
+     * Stash a high score file, might be useful for comparing statistics
+     */
+    public static void stash() throws IOException {
+        Path newTarget = Paths.get(System.getProperty("user.home"),String.format(".duku-scores.csv-%s",TIMESTAMP_FORMAT.format(LocalDateTime.now())));
+        Files.move(FILE,newTarget);
+    }
+
     public record Score (long seed, int size, int score, long completionTimeMillis, LocalDateTime date) {
         static Score fromLine(String s) {
             String[] parts = s.split(",");
