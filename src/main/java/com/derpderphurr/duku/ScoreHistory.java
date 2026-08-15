@@ -19,7 +19,7 @@ public final class ScoreHistory {
 
     private static final Path FILE = Paths.get(System.getProperty("user.home"), ".duku-scores.csv");
     private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    private static final String HEADER = "dateTimeIso,seed,size,score,completionTimeMillis";
+    private static final String HEADER = "dateTimeIso,seed,size,score,completionTimeMillis,difficulty";
 
     /**
      * Stash a high score file, might be useful for comparing statistics
@@ -29,31 +29,32 @@ public final class ScoreHistory {
         Files.move(FILE,newTarget);
     }
 
-    public record Score (long seed, int size, int score, long completionTimeMillis, LocalDateTime date) {
+    public record Score (long seed, int size, int score, long completionTimeMillis, LocalDateTime date,double difficulty) {
         static Score fromLine(String s) {
             String[] parts = s.split(",");
-            assert(parts.length == 5);
+            assert(parts.length == 6);
 
             LocalDateTime d = LocalDateTime.from(TIMESTAMP_FORMAT.parse(parts[0]));
             long seed = Long.parseLong(parts[1]);
             int size = Integer.parseInt(parts[2]);
             int score = Integer.parseInt(parts[3]);
             long compTime = Long.parseLong(parts[4]);
+            double difficulty = Double.parseDouble(parts[5]);
 
-            return new Score(seed,size,score,compTime,d);
+            return new Score(seed,size,score,compTime,d,difficulty);
         }
     }
 
     public static Stream<Score> getAllScores() throws IOException {
-        return Files.lines(FILE).map(Score::fromLine);
+        return Files.lines(FILE).skip(1).map(Score::fromLine);
     }
 
     //Appends one completed level's stats as a CSV row, creating the file (with header) on first
     //write. Failures are logged, not thrown - a lost score write shouldn't break level transitions.
     //seed is included so a past entry's exact board can be reproduced later (Playfield.sizeForSeed
     //derives the same size from it, and Playfield's own generation is seeded from it too).
-    public static void recordCompletion(long seed, int size, int score, long completionTimeMillis) throws IOException {
-        String row = TIMESTAMP_FORMAT.format(LocalDateTime.now()) + "," + seed + "," + size + "," + score + "," + completionTimeMillis;
+    public static void recordCompletion(long seed, int size, int score, long completionTimeMillis,double difficulty) throws IOException {
+        String row = TIMESTAMP_FORMAT.format(LocalDateTime.now()) + "," + seed + "," + size + "," + score + "," + completionTimeMillis+ "," + difficulty;
         if (Files.notExists(FILE)) {
             Files.writeString(FILE, HEADER + "\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE);
         }

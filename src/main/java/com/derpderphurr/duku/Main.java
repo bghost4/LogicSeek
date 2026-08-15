@@ -3,9 +3,7 @@ package com.derpderphurr.duku;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.scene.Scene;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -22,6 +20,15 @@ public class Main extends Application {
     private final LevelContainer lc = new LevelContainer();
 
     private void showHighScore(ActionEvent e) {
+        Dialog<Void> scoreDialog = new Dialog<>();
+
+        HighScore hs = new HighScore();
+
+        scoreDialog.getDialogPane().setContent(hs);
+
+        scoreDialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        scoreDialog.show();
 
     }
 
@@ -53,7 +60,7 @@ public class Main extends Application {
 
         mOptions.getItems().addAll(miScore,miAbout);
         mReset.getItems().addAll(miResetProgress,miResetScore);
-        mb.getMenus().add(mOptions);
+        mb.getMenus().addAll(mOptions,mReset);
         vb.getChildren().addAll(mb,lc);
 
         long seed = GamePrefs.getLastSeed(1);
