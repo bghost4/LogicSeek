@@ -22,6 +22,12 @@ jlink {
         installerName = 'LogicSeek'
         appVersion = (findProperty('appVersion') ?: project.version).toString()
         vendor = 'derpderp'
+        if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+            installerOptions = ['--win-shortcut', '--win-menu']
+            icon = file('packaging/icons/icon.ico')
+        } else {
+            icon = file('packaging/icons/icon.png')
+        }
     }
 }
 
