@@ -1,0 +1,26 @@
+app-id: com.derpderp.LogicSeek
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: LogicSeek
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+modules:
+  - name: logicseek
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/logicseek
+      - cp -r app-image/. /app/logicseek/
+      - mkdir -p /app/bin
+      - ln -s /app/logicseek/bin/LogicSeek /app/bin/LogicSeek
+      - install -Dm644 logicseek.desktop /app/share/applications/com.derpderp.LogicSeek.desktop
+      - install -Dm644 app-image/lib/LogicSeek.png /app/share/icons/hicolor/256x256/apps/com.derpderp.LogicSeek.png
+    sources:
+      - type: dir
+        path: app-image
+        dest: app-image
+      - type: file
+        path: logicseek.desktop
