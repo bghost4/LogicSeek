@@ -15,6 +15,15 @@ javafx {
     modules = [ 'javafx.controls', 'javafx.fxml' ]
 }
 
+jlink {
+    jpackage {
+        imageName = 'LogicSeek'
+        installerName = 'LogicSeek'
+        appVersion = (findProperty('appVersion') ?: project.version).toString()
+        vendor = 'derpderp'
+    }
+}
+
 application {
     mainClass = "com.derpderphurr.duku.Main"
     mainModule = "duku"

@@ -1,0 +1,136 @@
+name: Automated Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Auto version every build: 0.0.<run number>. No tagging required.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+    steps:
+      - id: compute
+        run: echo "version=0.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+  build-windows:
+    needs: version
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 23
+        uses: actions/setup-java@v5
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # windows-latest ships Wix Toolset, so this produces both an MSI and an EXE installer.
+      - name: Build Windows Installers (MSI + EXE)
+        run: ./gradlew jpackage "-PappVersion=${{ env.APP_VERSION }}"
+
+      - name: Upload Windows Installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-installers
+          path: |
+            build/jpackage/*.msi
+            build/jpackage/*.exe
+          if-no-files-found: error
+
+  build-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 23
+        uses: actions/setup-java@v5
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      # ubuntu-latest has dpkg-deb but not rpmbuild, so jpackage needs rpm installed to emit both.
+      - name: Install RPM packaging tool
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Build Linux Installers (DEB + RPM)
+        run: ./gradlew jpackage "-PappVersion=${{ env.APP_VERSION }}"
+
+      # jpackage doesn't emit AppImage/Flatpak itself; wrap its app-image output ourselves.
+      - name: Build AppImage
+        if: github.event_name != 'pull_request'
+        run: |
+          chmod +x packaging/linux/build-appimage.sh
+          ./packaging/linux/build-appimage.sh "${{ env.APP_VERSION }}"
+
+      # Flatpak packaging disabled for now (flathub runtime download was too slow/flaky).
+      # - name: Install Flatpak tooling
+      #   if: github.event_name != 'pull_request'
+      #   run: |
+      #     sudo apt-get install -y flatpak flatpak-builder
+      #     flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      #     flatpak install -y --user flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+      #
+      # - name: Build Flatpak
+      #   if: github.event_name != 'pull_request'
+      #   run: |
+      #     chmod +x packaging/linux/build-flatpak.sh
+      #     ./packaging/linux/build-flatpak.sh "${{ env.APP_VERSION }}"
+
+      - name: Upload Linux Installers
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-installers
+          path: |
+            build/jpackage/*.deb
+            build/jpackage/*.rpm
+            build/jpackage/*.AppImage
+          if-no-files-found: ${{ github.event_name != 'pull_request' && 'error' || 'ignore' }}
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [ version, build-windows, build-linux ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows Installers
+        uses: actions/download-artifact@v7
+        with:
+          name: windows-installers
+          path: dist
+
+      - name: Download Linux Installers
+        uses: actions/download-artifact@v7
+        with:
+          name: linux-installers
+          path: dist
+
+      # Each installer is uploaded as its own release asset, not bundled into a zip.
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: v${{ needs.version.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
