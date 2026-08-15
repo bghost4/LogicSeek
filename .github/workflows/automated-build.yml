@@ -11,14 +11,19 @@ permissions:
   contents: write
 
 jobs:
-  # Auto version every build: 0.0.<run number>. No tagging required.
+  # Major.minor comes from build.gradle (a deliberate decision); patch is the run number, auto.
   version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.compute.outputs.version }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
       - id: compute
-        run: echo "version=0.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        run: |
+          BASE=$(grep -oP "(?<=^version = ')[0-9]+\.[0-9]+" build.gradle)
+          echo "version=${BASE}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
   build-windows:
     needs: version

@@ -5,6 +5,7 @@ plugins {
 }
 
 group = 'com.derpderp'
+// Major.minor is the intentional, hand-picked part; CI parses it and appends its own build number as the patch.
 version = '0.0.1'
 
 repositories {
