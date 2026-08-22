@@ -19,6 +19,7 @@ public class Level extends Region {
     private final Tile[][] tiles;
     private final List<Tile> tileList;
     private final int size;
+    private final ThemePak pak;
     private long levelTimer;
     private long lastFindTime;
     private double multiplier = 1.0;
@@ -55,20 +56,7 @@ public class Level extends Region {
     private final SimpleIntegerProperty misses = new SimpleIntegerProperty(0);
     private final ReadOnlyIntegerWrapper sizeProp;
     
-    public static final Color[] REGION_COLORS = {
-            Color.web("#e6194b"), // red
-            Color.web("#f58231"), // orange
-            Color.web("#ffe119"), // yellow
-            Color.web("#bfef45"), // lime
-            Color.web("#3cb44b"), // green
-            Color.web("#469990"), // teal
-            Color.web("#42d4f4"), // cyan
-            Color.web("#4363d8"), // blue
-            Color.web("#000075"), // navy
-            Color.web("#911eb4"), // purple
-            Color.web("#f032e6"), // magenta
-            Color.web("#9a6324"), // brown
-    };
+
 
     //This level's shuffled slice of REGION_COLORS, indexed by Cell.colorGroup - the default
     //"stylesheet". Kept as a field (not a buildLevel local) since Tile reads it back through
@@ -104,7 +92,7 @@ public class Level extends Region {
         //which hex color represents which color group is purely cosmetic and doesn't affect
         //difficulty, so it's picked here rather than inside the JavaFX-free generator. Stored as a
         //field (not a local) so Tile can look it up via colorFor() while it's being constructed.
-        List<Color> palette = new ArrayList<>(Arrays.asList(REGION_COLORS));
+        List<Color> palette = new ArrayList<>(Arrays.asList(pak.getColors()));
         Collections.shuffle(palette, rand);
         colors = palette.subList(0, size);
 
@@ -160,10 +148,11 @@ public class Level extends Region {
     //which runs generation on a background Task) - it never triggers generation itself, so
     //constructing one is cheap and safe to do on the FX thread. size/seed both come from the
     //Result rather than being passed in separately, since Result already pins them together.
-    public Level(PuzzleGenerator.Result result) {
+    public Level(PuzzleGenerator.Result result,ThemePak pak) {
         this.size = result.size();
         this.seed = result.seed();
         this.rand = new Random(seed);
+        this.pak = pak;
 
         this.initialWindowMs = PER_CELL_WINDOW_MS * size;
         this.decayRate = size > 1 ? Math.pow(MIN_WINDOW_FRACTION, 1.0 / (size - 1)) : 1.0;

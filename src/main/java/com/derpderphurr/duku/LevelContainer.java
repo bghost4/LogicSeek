@@ -3,10 +3,13 @@ package com.derpderphurr.duku;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.*;
 
 import java.io.IOException;
@@ -28,8 +31,25 @@ public class LevelContainer extends Region {
     private final ProgressBar loadingProgress = new ProgressBar(ProgressIndicator.INDETERMINATE_PROGRESS);
     private final Label lblLoading = new Label("Generating level...");
     private final VBox loadingPane = new VBox(8, lblLoading, loadingProgress);
+    private final DefaultThemePak pak;
 
+    private final VBox vbActionContainer = new VBox();
+    private final Label lblActionContainer = new Label();
+    private final Button btnAction = new Button();
+
+    private final GaussianBlur blurEffect = new GaussianBlur(15);
+
+    private void onNextLevel(ActionEvent E) {
+        this.generateLevel(playfield.get().getSeed() + 1);
+    }
+    private void onRetryLevel(ActionEvent E) {
+        playfield.get().reset();
+        vbActionContainer.setVisible(false);
+        playfield.get().setEffect(null);
+    }
     public LevelContainer() {
+
+        this.pak = new DefaultThemePak();
 
         String cssUrl = Objects.requireNonNull(getClass().getResource("/LevelContainer.css")).toExternalForm();
         this.getStylesheets().add(cssUrl);
@@ -77,6 +97,14 @@ public class LevelContainer extends Region {
 
         this.getChildren().add(gp);
 
+        vbActionContainer.getChildren().addAll(lblActionContainer,btnAction);
+        vbActionContainer.setVisible(false);
+        vbActionContainer.getStyleClass().add("action-container");
+
+
+        playfieldStackPane.setAlignment(Pos.CENTER);
+        playfieldStackPane.getChildren().add(vbActionContainer);
+
         //Attach Code
         playfield.addListener( (ob,ov,nv) -> {
             if(nv != null) {
@@ -90,17 +118,32 @@ public class LevelContainer extends Region {
                 playfieldStackPane.getChildren().add(nv);
                 playfieldStackPane.getChildren().remove(ov);
 
+
                 lblTargetStats.textProperty().bind(Bindings.format("Targets: %d/%d",nv.foundTargetsProperty(),nv.getSizeProperty()));
                 lblMisses.textProperty().bind(Bindings.format("Misses: %d/%d",nv.missesProperty(),3));
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
-                nv.onLevelFailedProperty().set(Level::reset);
+                nv.onLevelFailedProperty().set(p -> {
+                    pak.getLevelFailSound().play();
+                    playfield.get().setEffect(blurEffect);
+                    lblActionContainer.setText("Level Failed");
+                    btnAction.setText("Try Again");
+                    btnAction.setOnAction(this::onRetryLevel);
+                    vbActionContainer.toFront();
+                    vbActionContainer.setVisible(true);
+                });
                 nv.onLevelCompleteProperty().set(p -> {
+                    pak.getLevelSuccessSound().play();
                     try {
                         ScoreHistory.recordCompletion(p.getSeed(), p.getSizeProperty().get(), p.scoreProperty().get(), p.getElapsedMillis(),p.getDifficultyScore());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    this.generateLevel(p.getSeed() + 1);
+                    playfield.get().setEffect(blurEffect);
+                    lblActionContainer.setText(String.format("Level Complete! Score: %d",p.scoreProperty().get()));
+                    btnAction.setOnAction(this::onNextLevel);
+                    btnAction.setText("NEXT LEVEL");
+                    vbActionContainer.toFront();
+                    vbActionContainer.setVisible(true);
                 });
             }
         } );
@@ -129,8 +172,11 @@ public class LevelContainer extends Region {
         };
         task.setOnSucceeded(e -> {
             playfieldStackPane.getChildren().remove(loadingPane);
-            setLevel(new Level(task.getValue()));
+            setLevel(new Level(task.getValue(),pak));
+            playfield.get().setEffect(null);
+            vbActionContainer.setVisible(false);
         });
+
 
         Thread thread = new Thread(task, "level-generator");
         thread.setDaemon(true);
