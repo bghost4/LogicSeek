@@ -67,6 +67,22 @@ public class Tile extends Region {
         this.maxHeight(Double.MAX_VALUE);
 
         rect.setOnMouseClicked(this::handleClick);
+        rect.setOnDragDetected(me -> {
+            this.crossed.set(!this.crossed.get());
+            this.level.dragTypeMarkProperty().set(this.crossed.get());
+            this.level.markDraggingProperty().set(true);
+            rect.startFullDrag();
+            me.consume();
+        });
+
+        this.setOnMouseDragEntered(me -> {
+            if(this.level.markDraggingProperty().get()) {
+                this.crossed.set(this.level.isDragTypeMark());
+            }
+            me.consume();
+        });
+
+
 
         //X mark for crossed-off tiles / wrong guesses (color set depending on which)
         crossLineA.startXProperty().bind(rect.widthProperty().multiply(0.25));

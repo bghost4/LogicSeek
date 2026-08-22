@@ -58,8 +58,34 @@ public class Level extends Region {
     private final SimpleIntegerProperty foundTargets = new SimpleIntegerProperty(0);
     private final SimpleIntegerProperty misses = new SimpleIntegerProperty(0);
     private final ReadOnlyIntegerWrapper sizeProp;
-    
 
+    //properties for dragging
+    private final SimpleBooleanProperty markDragging = new SimpleBooleanProperty(false);
+    private final SimpleBooleanProperty dragTypeMark = new SimpleBooleanProperty(true);
+
+    public boolean isDragTypeMark() {
+        return dragTypeMark.get();
+    }
+
+    public SimpleBooleanProperty dragTypeMarkProperty() {
+        return dragTypeMark;
+    }
+
+    public void setDragTypeMark(boolean dragTypeMark) {
+        this.dragTypeMark.set(dragTypeMark);
+    }
+
+    public boolean isMarkDragging() {
+        return markDragging.get();
+    }
+
+    public SimpleBooleanProperty markDraggingProperty() {
+        return markDragging;
+    }
+
+    public void setMarkDragging(boolean markDragging) {
+        this.markDragging.set(markDragging);
+    }
 
     //This level's shuffled slice of REGION_COLORS, indexed by Cell.colorGroup - the default
     //"stylesheet". Kept as a field (not a buildLevel local) since Tile reads it back through

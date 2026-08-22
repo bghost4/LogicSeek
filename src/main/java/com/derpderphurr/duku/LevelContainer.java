@@ -10,7 +10,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.*;
 
 import java.io.IOException;
@@ -34,6 +33,7 @@ public class LevelContainer extends Region {
     private final VBox loadingPane = new VBox(8, lblLoading, loadingProgress);
     private final DefaultThemePak pak;
 
+    //Container for End of Level text and button
     private final VBox vbActionContainer = new VBox();
     private final Label lblActionContainer = new Label();
     private final Button btnAction = new Button();
@@ -41,6 +41,7 @@ public class LevelContainer extends Region {
     private void onNextLevel(ActionEvent E) {
         this.generateLevel(playfield.get().getSeed() + 1);
     }
+
     private void onRetryLevel(ActionEvent E) {
         playfield.get().reset();
         vbActionContainer.setVisible(false);
