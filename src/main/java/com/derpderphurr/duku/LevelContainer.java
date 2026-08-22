@@ -5,6 +5,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -37,15 +38,13 @@ public class LevelContainer extends Region {
     private final Label lblActionContainer = new Label();
     private final Button btnAction = new Button();
 
-    private final GaussianBlur blurEffect = new GaussianBlur(15);
-
     private void onNextLevel(ActionEvent E) {
         this.generateLevel(playfield.get().getSeed() + 1);
     }
     private void onRetryLevel(ActionEvent E) {
         playfield.get().reset();
         vbActionContainer.setVisible(false);
-        playfield.get().setEffect(null);
+        playfield.get().setDisable(false);
     }
     public LevelContainer() {
 
@@ -100,10 +99,12 @@ public class LevelContainer extends Region {
         vbActionContainer.getChildren().addAll(lblActionContainer,btnAction);
         vbActionContainer.setVisible(false);
         vbActionContainer.getStyleClass().add("action-container");
-
+        Group g = new Group();
+        g.getChildren().add(vbActionContainer);
+        vbActionContainer.setViewOrder(-12.0);
 
         playfieldStackPane.setAlignment(Pos.CENTER);
-        playfieldStackPane.getChildren().add(vbActionContainer);
+        playfieldStackPane.getChildren().add(g);
 
         //Attach Code
         playfield.addListener( (ob,ov,nv) -> {
@@ -124,12 +125,13 @@ public class LevelContainer extends Region {
                 lblScore.textProperty().bind(Bindings.format("Score: %d",nv.scoreProperty()));
                 nv.onLevelFailedProperty().set(p -> {
                     pak.getLevelFailSound().play();
-                    playfield.get().setEffect(blurEffect);
+                    playfield.get().setDisable(true);
                     lblActionContainer.setText("Level Failed");
                     btnAction.setText("Try Again");
                     btnAction.setOnAction(this::onRetryLevel);
-                    vbActionContainer.toFront();
                     vbActionContainer.setVisible(true);
+                    playfield.get().toBack();
+                    vbActionContainer.toFront();
                 });
                 nv.onLevelCompleteProperty().set(p -> {
                     pak.getLevelSuccessSound().play();
@@ -138,12 +140,13 @@ public class LevelContainer extends Region {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    playfield.get().setEffect(blurEffect);
+                    playfield.get().setDisable(true);
                     lblActionContainer.setText(String.format("Level Complete! Score: %d",p.scoreProperty().get()));
                     btnAction.setOnAction(this::onNextLevel);
                     btnAction.setText("NEXT LEVEL");
-                    vbActionContainer.toFront();
                     vbActionContainer.setVisible(true);
+                    playfield.get().toBack();
+                    vbActionContainer.toFront();
                 });
             }
         } );
@@ -173,7 +176,7 @@ public class LevelContainer extends Region {
         task.setOnSucceeded(e -> {
             playfieldStackPane.getChildren().remove(loadingPane);
             setLevel(new Level(task.getValue(),pak));
-            playfield.get().setEffect(null);
+            playfield.get().setDisable(false);
             vbActionContainer.setVisible(false);
         });
 

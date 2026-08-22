@@ -2,6 +2,7 @@ package com.derpderphurr.duku;
 
 import javafx.beans.property.*;
 import javafx.geometry.Insets;
+import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -33,6 +34,8 @@ public class Level extends Region {
     private static final double PER_CELL_WINDOW_MS = 3000;
     private static final double MIN_WINDOW_FRACTION = 0.3;
     private static final double MAX_MULTIPLIER = 2.5;
+
+    GaussianBlur blur = new GaussianBlur(15);
 
     //Board size is derived from the seed rather than stored separately, so a seed alone is enough
     //to reproduce a level - only MIN_SIZE..MAX_SIZE are actually used, so the game only ever needs
@@ -157,6 +160,14 @@ public class Level extends Region {
         this.initialWindowMs = PER_CELL_WINDOW_MS * size;
         this.decayRate = size > 1 ? Math.pow(MIN_WINDOW_FRACTION, 1.0 / (size - 1)) : 1.0;
         this.comboStep = (MAX_MULTIPLIER - 1.0) / size;
+
+        this.disabledProperty().addListener((ob,ov,nv) -> {
+            if(nv) {
+                this.setEffect(blur);
+            } else {
+                this.setEffect(null);
+            }
+        });
 
         tileList = new ArrayList<>(size*size);
         this.getChildren().add(gp);

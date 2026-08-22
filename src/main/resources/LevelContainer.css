@@ -1,7 +1,7 @@
 .label { -fx-font-size: 20; }
 .seed-label { }
 .difficulty-label { -fx-text-alignment: right; }
-.score-label { }
+.score-label { -fx-text-alignment: center; }
 .targetstats-label { }
 .misses-label { -fx-text-fill: RED; -fx-text-alignment: right; }
-.action-container { -fx-background-color: GREEN }
+.action-container { -fx-background-color: GREEN; -fx-alignment: center; }
