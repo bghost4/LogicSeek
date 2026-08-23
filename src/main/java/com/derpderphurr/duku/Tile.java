@@ -68,7 +68,6 @@ public class Tile extends Region {
 
         rect.setOnMouseClicked(this::handleClick);
         rect.setOnDragDetected(me -> {
-            this.crossed.set(!this.crossed.get());
             this.level.dragTypeMarkProperty().set(this.crossed.get());
             this.level.markDraggingProperty().set(true);
             rect.startFullDrag();
@@ -77,7 +76,8 @@ public class Tile extends Region {
 
         this.setOnMouseDragEntered(me -> {
             if(this.level.markDraggingProperty().get()) {
-                this.crossed.set(this.level.isDragTypeMark());
+                //this.crossed.set(this.level.isDragTypeMark());
+                markCross(!this.level.isDragTypeMark());
             }
             me.consume();
         });
@@ -152,10 +152,20 @@ public class Tile extends Region {
         }
     }
 
-    public void markCross() {
-        crossed.set(!crossed.get());
-        crossLineA.setStroke(Color.BLACK);
-        crossLineB.setStroke(Color.BLACK);
+    public void toggleCross() {
+        if(!solved.get()) {
+            crossed.set(!crossed.get());
+            crossLineA.setStroke(Color.BLACK);
+            crossLineB.setStroke(Color.BLACK);
+        }
+    }
+
+    public void markCross(boolean v) {
+        if(!solved.get()) {
+            crossed.set(v);
+            crossLineA.setStroke(Color.BLACK);
+            crossLineB.setStroke(Color.BLACK);
+        }
     }
 
     private void handleClick(MouseEvent e) {
@@ -164,10 +174,10 @@ public class Tile extends Region {
             if (e.getClickCount() == 2) {
                 markTarget();
             } else {
-                markCross();
+                toggleCross();
             }
         } else {
-            markCross();
+            toggleCross();
         }
     }
 
