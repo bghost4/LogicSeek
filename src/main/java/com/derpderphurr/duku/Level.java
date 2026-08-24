@@ -6,10 +6,8 @@ import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -18,7 +16,6 @@ import java.util.stream.IntStream;
 
 public class Level extends Region {
     private final GridPane gp = new GridPane();
-    private final Tile[][] tiles;
     private final List<Tile> tileList;
     private final int size;
     private long levelTimer;
@@ -26,7 +23,6 @@ public class Level extends Region {
     private double multiplier = 1.0;
     private int comboStreak = 0;
     private double difficultyScore;
-    private final double gap = 5;
     private final long seed;
     private final Random rand;
 
@@ -38,7 +34,7 @@ public class Level extends Region {
     GaussianBlur blur = new GaussianBlur(15);
 
     //Board size is derived from the seed rather than stored separately, so a seed alone is enough
-    //to reproduce a level - only MIN_SIZE..MAX_SIZE are actually used, so the game only ever needs
+    //to reproduce a level - only MIN_SIZE.MAX_SIZE are actually used, so the game only ever needs
     //to persist one number (see GamePrefs.getLastSeed / sizeForSeed below).
     public static final int MIN_SIZE = 6;
     public static final int MAX_SIZE = 10;
@@ -71,20 +67,8 @@ public class Level extends Region {
         return dragTypeMark;
     }
 
-    public void setDragTypeMark(boolean dragTypeMark) {
-        this.dragTypeMark.set(dragTypeMark);
-    }
-
-    public boolean isMarkDragging() {
-        return markDragging.get();
-    }
-
     public SimpleBooleanProperty markDraggingProperty() {
         return markDragging;
-    }
-
-    public void setMarkDragging(boolean markDragging) {
-        this.markDragging.set(markDragging);
     }
 
     //used to use static hard coded colors this shifts everything into a color_group stylesheet class
@@ -114,7 +98,7 @@ public class Level extends Region {
     //just the visual representation of a Result.
     private void buildLevel(PuzzleGenerator.Result result) {
 
-        //mix up the colorgroupd styles
+        //mix up the color group styles
         List<String> palette = new ArrayList<>(IntStream.range(0,12).mapToObj(i -> String.format("color_group_%d",i)).toList());
         Collections.shuffle(palette, rand);
         colorGroups = palette.subList(0,size);
@@ -124,7 +108,6 @@ public class Level extends Region {
                 Cell cell = result.cells()[row][col];
                 Tile t = new Tile(this, cell);
 
-                tiles[col][row] = t;
                 GridPane.setVgrow(t, Priority.ALWAYS);
                 GridPane.setHgrow(t, Priority.ALWAYS);
                 gp.add(t, col, row);
@@ -161,10 +144,10 @@ public class Level extends Region {
         this.foundTargets.set(foundTargets.get()+1);
     }
 
-    private final SimpleObjectProperty<Consumer<Level>> onLevelComplete = new SimpleObjectProperty<>(l -> {});
-    private final SimpleObjectProperty<Consumer<Level>> onLevelFailed = new SimpleObjectProperty<>(l -> {});
+    private final SimpleObjectProperty<Consumer<Level>> onLevelComplete = new SimpleObjectProperty<>(_ -> {});
+    private final SimpleObjectProperty<Consumer<Level>> onLevelFailed = new SimpleObjectProperty<>(_ -> {});
     private final SimpleObjectProperty<Consumer<Tile>> onTargetFound = new SimpleObjectProperty<>(this::targetFound);
-    private final SimpleObjectProperty<Consumer<Tile>> onTargetMissed = new SimpleObjectProperty<>(t -> {});
+    private final SimpleObjectProperty<Consumer<Tile>> onTargetMissed = new SimpleObjectProperty<>(_ -> {});
     private final SimpleObjectProperty<Consumer<Tile>> onMarked = new SimpleObjectProperty<>(this::targetMissed);
 
     public ObjectProperty<Consumer<Level>> onLevelCompleteProperty() { return onLevelComplete; }
@@ -187,7 +170,7 @@ public class Level extends Region {
         this.decayRate = size > 1 ? Math.pow(MIN_WINDOW_FRACTION, 1.0 / (size - 1)) : 1.0;
         this.comboStep = (MAX_MULTIPLIER - 1.0) / size;
 
-        this.disabledProperty().addListener((ob,ov,nv) -> {
+        this.disabledProperty().addListener((_, _, nv) -> {
             if(nv) {
                 this.setEffect(blur);
             } else {
@@ -204,20 +187,21 @@ public class Level extends Region {
 
         gp.prefWidthProperty().bind(this.widthProperty());
         gp.prefHeightProperty().bind(this.widthProperty());
+        double gap = 5;
         gp.setHgap(gap);
         gp.setVgap(gap);
-        gp.setPadding(new Insets(gap,gap,gap,gap));
+        gp.setPadding(new Insets(gap, gap, gap, gap));
 
         this.prefHeightProperty().bind(this.widthProperty());
 
-        tiles = new Tile[size][size];
+        //tiles = new Tile[size][size];
 
         buildLevel(result);
         this.levelTimer = System.currentTimeMillis();
 
         //set up listeners for misses and targets
-        foundTargets.addListener(il -> { if(foundTargets.get() == size) { onLevelComplete.get().accept(this); } } );
-        misses.addListener( il -> { if(misses.get() > 2){ onLevelFailed.get().accept(this); } });
+        foundTargets.addListener(_ -> { if(foundTargets.get() == size) { onLevelComplete.get().accept(this); } } );
+        misses.addListener(_ -> { if(misses.get() > 2){ onLevelFailed.get().accept(this); } });
         sizeProp = new ReadOnlyIntegerWrapper(size);
     }
 
