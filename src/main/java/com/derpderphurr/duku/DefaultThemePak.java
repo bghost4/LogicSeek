@@ -7,24 +7,7 @@ import java.net.URL;
 
 public class DefaultThemePak implements ThemePak {
 
-    private final AudioClip lvlSuccess,lvlFail;
-
-    public static final Color[] REGION_COLORS = {
-            Color.web("#e6194b"), // red
-            Color.web("#f58231"), // orange
-            Color.web("#ffe119"), // yellow
-            Color.web("#bfef45"), // lime
-            Color.web("#3cb44b"), // green
-            Color.web("#469990"), // teal
-            Color.web("#42d4f4"), // cyan
-            Color.web("#4363d8"), // blue
-            Color.web("#000075"), // navy
-            Color.web("#911eb4"), // purple
-            Color.web("#f032e6"), // magenta
-            Color.web("#9a6324"), // brown
-    };
-
-    public Color[] getColors() { return REGION_COLORS; }
+    private final AudioClip lvlSuccess,lvlFail,tgtFound,tgtFail;
 
     public DefaultThemePak() {
         URL lvlSuccessURL = getClass().getResource("/527650__fupicat__winsquare.wav");
@@ -33,6 +16,11 @@ public class DefaultThemePak implements ThemePak {
         URL lvlFailURL = getClass().getResource("/475347__fupicat__videogame-death-sound.wav");
         lvlFail = new AudioClip(lvlFailURL.toExternalForm());
 
+        URL tgtFoundURL = getClass().getResource("/471937__fupicat__videogame-menu-select.wav");
+        tgtFound = new AudioClip(tgtFoundURL.toExternalForm());
+
+        URL tgtFailURL = getClass().getResource("/538156__fupicat__yoink2.wav");
+        tgtFail = new AudioClip(tgtFailURL.toExternalForm());
     }
 
     @Override
@@ -52,12 +40,12 @@ public class DefaultThemePak implements ThemePak {
 
     @Override
     public AudioClip getTargetFoundSound() {
-        return null;
+        return tgtFound;
     }
 
     @Override
     public AudioClip getTargetFailSound() {
-        return null;
+        return tgtFail;
     }
 
     @Override

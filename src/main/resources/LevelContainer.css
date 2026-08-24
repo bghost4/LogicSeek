@@ -5,3 +5,16 @@
 .targetstats-label { }
 .misses-label { -fx-text-fill: RED; -fx-text-alignment: right; }
 .action-container { -fx-background-color: GREEN; -fx-alignment: center; }
+
+.color_group_0 { -fx-fill: #e6194b; }
+.color_group_1 { -fx-fill: #f58231; }
+.color_group_2 { -fx-fill: #ffe119; }
+.color_group_3 { -fx-fill: #bfef45; }
+.color_group_4 { -fx-fill: #3cb44b; }
+.color_group_5 { -fx-fill: #469990; }
+.color_group_6 { -fx-fill: #42d4f4; }
+.color_group_7 { -fx-fill: #4363d8; }
+.color_group_8 { -fx-fill: #000075; }
+.color_group_9 { -fx-fill: #911eb4; }
+.color_group_10 { -fx-fill: #f032e6; }
+.color_group_11 { -fx-fill: #9a6324; }

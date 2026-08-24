@@ -14,5 +14,5 @@ public interface ThemePak {
     AudioClip getTargetFailSound();
     AudioClip getMarkSound();
 
-    Color[] getColors();
+
 }

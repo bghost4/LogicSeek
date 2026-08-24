@@ -176,7 +176,7 @@ public class LevelContainer extends Region {
         };
         task.setOnSucceeded(e -> {
             playfieldStackPane.getChildren().remove(loadingPane);
-            setLevel(new Level(task.getValue(),pak));
+            setLevel(new Level(task.getValue()));
             playfield.get().setDisable(false);
             vbActionContainer.setVisible(false);
         });

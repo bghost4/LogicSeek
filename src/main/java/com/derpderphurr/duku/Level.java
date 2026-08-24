@@ -14,19 +14,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 
 public class Level extends Region {
     private final GridPane gp = new GridPane();
     private final Tile[][] tiles;
     private final List<Tile> tileList;
     private final int size;
-    private final ThemePak pak;
     private long levelTimer;
     private long lastFindTime;
     private double multiplier = 1.0;
     private int comboStreak = 0;
     private double difficultyScore;
-    private double gap = 5;
+    private final double gap = 5;
     private final long seed;
     private final Random rand;
 
@@ -50,9 +50,9 @@ public class Level extends Region {
     // Derived once per level from size: the window shrinks each find so the last target of the
     // level always gets MIN_WINDOW_FRACTION of the first target's window, and a flawless run
     // always tops out at exactly MAX_MULTIPLIER by the final target, regardless of level size.
-    private double initialWindowMs;
-    private double decayRate;
-    private double comboStep;
+    private final double initialWindowMs;
+    private final double decayRate;
+    private final double comboStep;
 
     private final SimpleIntegerProperty score = new SimpleIntegerProperty(0);
     private final SimpleIntegerProperty foundTargets = new SimpleIntegerProperty(0);
@@ -87,16 +87,11 @@ public class Level extends Region {
         this.markDragging.set(markDragging);
     }
 
-    //This level's shuffled slice of REGION_COLORS, indexed by Cell.colorGroup - the default
-    //"stylesheet". Kept as a field (not a buildLevel local) since Tile reads it back through
-    //colorFor() while it's being constructed. A future customizable stylesheet would replace how
-    //this list is built, not how Tile or Cell work with it.
-    private List<Color> colors;
+    //used to use static hard coded colors this shifts everything into a color_group stylesheet class
+    private List<String> colorGroups;
 
-    //Resolves a Cell's colorGroup to the actual paint Color for this level - the seam a future
-    //user-customizable stylesheet would hook into instead of the REGION_COLORS shuffle below.
-    public Color colorFor(int colorGroup) {
-        return colors.get(colorGroup);
+    public String styleFor(int colorGroup) {
+        return colorGroups.get(colorGroup);
     }
 
     public void reset() {
@@ -118,12 +113,11 @@ public class Level extends Region {
     //own Cell - see Tile.getRow/getCol/colorFor). Level is the same kind of thing one level up:
     //just the visual representation of a Result.
     private void buildLevel(PuzzleGenerator.Result result) {
-        //which hex color represents which color group is purely cosmetic and doesn't affect
-        //difficulty, so it's picked here rather than inside the JavaFX-free generator. Stored as a
-        //field (not a local) so Tile can look it up via colorFor() while it's being constructed.
-        List<Color> palette = new ArrayList<>(Arrays.asList(pak.getColors()));
+
+        //mix up the colorgroupd styles
+        List<String> palette = new ArrayList<>(IntStream.range(0,12).mapToObj(i -> String.format("color_group_%d",i)).toList());
         Collections.shuffle(palette, rand);
-        colors = palette.subList(0, size);
+        colorGroups = palette.subList(0,size);
 
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
@@ -145,13 +139,13 @@ public class Level extends Region {
                 result.sharedNeighborHits(), result.lockedSetHits(), difficultyScore);
     }
 
-    public void targetMissed() {
+    public void targetMissed(Tile t) {
         this.misses.set(misses.get()+1);
         comboStreak = 0;
         multiplier = 1.0;
     }
 
-    public void targetFound() {
+    private void targetFound(Tile t) {
         long now = System.currentTimeMillis();
         long elapsed = now - lastFindTime;
         double window = initialWindowMs * Math.pow(decayRate, foundTargets.get());
@@ -169,19 +163,25 @@ public class Level extends Region {
 
     private final SimpleObjectProperty<Consumer<Level>> onLevelComplete = new SimpleObjectProperty<>(l -> {});
     private final SimpleObjectProperty<Consumer<Level>> onLevelFailed = new SimpleObjectProperty<>(l -> {});
+    private final SimpleObjectProperty<Consumer<Tile>> onTargetFound = new SimpleObjectProperty<>(this::targetFound);
+    private final SimpleObjectProperty<Consumer<Tile>> onTargetMissed = new SimpleObjectProperty<>(t -> {});
+    private final SimpleObjectProperty<Consumer<Tile>> onMarked = new SimpleObjectProperty<>(this::targetMissed);
 
     public ObjectProperty<Consumer<Level>> onLevelCompleteProperty() { return onLevelComplete; }
     public ObjectProperty<Consumer<Level>> onLevelFailedProperty() { return onLevelFailed; }
+    public ObjectProperty<Consumer<Tile>> onTargetFoundProperty() { return onTargetFound; }
+    public ObjectProperty<Consumer<Tile>> onTargetMissedProperty() { return onTargetMissed; }
+    public ObjectProperty<Consumer<Tile>> onMarkedProperty() { return onMarked; }
 
     //Level is only ever built from an already-computed Result (see LevelContainer.generateLevel,
     //which runs generation on a background Task) - it never triggers generation itself, so
     //constructing one is cheap and safe to do on the FX thread. size/seed both come from the
     //Result rather than being passed in separately, since Result already pins them together.
-    public Level(PuzzleGenerator.Result result,ThemePak pak) {
+    public Level(PuzzleGenerator.Result result) {
         this.size = result.size();
         this.seed = result.seed();
         this.rand = new Random(seed);
-        this.pak = pak;
+
 
         this.initialWindowMs = PER_CELL_WINDOW_MS * size;
         this.decayRate = size > 1 ? Math.pow(MIN_WINDOW_FRACTION, 1.0 / (size - 1)) : 1.0;

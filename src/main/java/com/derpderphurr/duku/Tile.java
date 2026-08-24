@@ -61,6 +61,7 @@ public class Tile extends Region {
         rect.arcWidthProperty().bind(rect.widthProperty().multiply(widthPercentage));
         rect.arcHeightProperty().bind(rect.heightProperty().multiply(heightPercentage));
 
+        //keep square
         rect.widthProperty().bind(this.widthProperty());
 
         this.maxWidth(Double.MAX_VALUE);
@@ -135,7 +136,7 @@ public class Tile extends Region {
         targetMark.visibleProperty().bind(found);
 
         this.getChildren().addAll(rect, crossMark, targetOutline, targetMark);
-        rect.setFill(level.colorFor(cell.colorGroup));
+        rect.getStyleClass().add(level.styleFor(cell.colorGroup));
     }
 
     public void markTarget() {
@@ -143,12 +144,12 @@ public class Tile extends Region {
             found.set(true);
             solved.set(true);
             crossed.set(false);
-            level.targetFound();
+            level.onTargetFoundProperty().get().accept(this);
         } else {
             crossed.set(true);
             crossLineA.setStroke(Color.RED);
             crossLineB.setStroke(Color.RED);
-            level.targetMissed();
+            level.onTargetMissedProperty().get().accept(this);
         }
     }
 
@@ -158,6 +159,7 @@ public class Tile extends Region {
             crossLineA.setStroke(Color.BLACK);
             crossLineB.setStroke(Color.BLACK);
         }
+        this.level.onMarkedProperty().get().accept(this);
     }
 
     public void markCross(boolean v) {
@@ -165,6 +167,7 @@ public class Tile extends Region {
             crossed.set(v);
             crossLineA.setStroke(Color.BLACK);
             crossLineB.setStroke(Color.BLACK);
+            level.onMarkedProperty().get().accept(this);
         }
     }
 
@@ -179,6 +182,7 @@ public class Tile extends Region {
         } else {
             toggleCross();
         }
+        e.consume();
     }
 
     public boolean isTarget() {
